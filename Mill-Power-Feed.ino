@@ -52,7 +52,7 @@ void setup() {
     pinModeFast(LED_BUILTIN, OUTPUT);
 	
     // Pull the enable pin high to disable the driver by default
-	digitalWriteFast(ENABLE, LOW);
+	digitalWriteFast(ENABLE, HIGH);
 
 	// Pull the direction pin low to set the default direction
 	digitalWriteFast(DIRECTION, LOW);
@@ -95,7 +95,7 @@ void readThreeWaySwitch() {
 //Only toggle the state if it's disabled. Used for debounce
 void enableStepper(String direction) {
     if (!stepperEnabled) {
-        //delay(100); //Debounce on state change, for bouncy switches
+        delay(10); //Debounce on state change, for bouncy switches
         stepperEnabled = true;
         digitalWriteFast(ENABLE, LOW); // Enable the driver
         digitalWriteFast(LED_BUILTIN, HIGH);
@@ -108,7 +108,7 @@ void disableStepper() {
     if (stepperEnabled) {
         delay(100); //Debounce on state change, for bouncy switches
         stepperEnabled = false;
-        //digitalWriteFast(ENABLE, HIGH);
+        digitalWriteFast(ENABLE, HIGH);
         digitalWriteFast(LED_BUILTIN, LOW);
         Serial.println();
         Serial.println("Motor Stopped");
@@ -132,7 +132,6 @@ void singleStep() {
         //prevStepMillis += millisBetweenSteps;
         prevStepMillis = curMillis;
         digitalWriteFast(PULSE, HIGH);
-        Serial.print(".");
         delayMicroseconds(pulseWidthMicroseconds); // this line is probably unnecessary?
         digitalWriteFast(PULSE, LOW);
     }
