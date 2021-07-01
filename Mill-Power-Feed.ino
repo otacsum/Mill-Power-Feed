@@ -2,21 +2,24 @@
 #include <digitalWriteFast.h> 
 
 // Pins used for stepper control signals
-#define PULSE 5
-#define DIRECTION 6
-#define ENABLE 7
+#define PULSE_PIN 5
+#define DIRECTION_PIN 6
+#define ENABLE_PIN 7
 
 // Pins used for direction signals
-#define MOVELEFT 8
-#define MOVERIGHT 9
+#define MOVELEFT_PIN 8
+#define MOVERIGHT_PIN 9
+
+// Pin used for rapids signal
+#define RAPID_PIN 10
 
 //Stepper Driver Configuration Values
-#define STEPSPERREV 400 // Half-stepping (200 full steps => 400 half steps per rev)
+#define STEPSPERREV 200 // Half-stepping (200 full steps => 400 half steps per rev)
 #define REVSPERINCH 20 // 2:1 Pulley Reduction, 10 screw turns per inch
 
 // Imperial milling speeds defined in IPM, to be reduced to step pulses.
 // This will be replaced with the rotary encoded values.
-const long InchesPerMin = 60;
+const long maxInchesPerMin = 1;
 
 bool moveLeftEnabled = false;
 bool moveRightEnabled = false;
@@ -26,7 +29,7 @@ bool stepperEnabled = false;
 unsigned long curMicros;
 unsigned long prevStepMicros = 0;
 long microsPerStep; 
-int pulseWidthMicroseconds = 5;
+int pulseWidthMicroseconds = 50;
 
 // Acceleration Params
 long stepsPerSec = 0;
@@ -39,7 +42,7 @@ const long accelRate = 20; // Steps per accel interval
 
 
 unsigned long microsBetweenSteps() {
-    unsigned long RPM = InchesPerMin * REVSPERINCH;
+    unsigned long RPM = maxInchesPerMin * REVSPERINCH;
     //Using minutes because the truncated remainders are less significant.
     unsigned long stepsPerMin = RPM * STEPSPERREV;
     maxStepsPerSec = stepsPerMin / long(60);
@@ -53,23 +56,25 @@ unsigned long microsBetweenSteps() {
 
 void setup() {
     // Set pin default states
-	pinModeFast(PULSE, OUTPUT);
-	pinModeFast(DIRECTION, OUTPUT);
-	pinModeFast(ENABLE, OUTPUT);
+	pinModeFast(PULSE_PIN, OUTPUT);
+	pinModeFast(DIRECTION_PIN, OUTPUT);
+	pinModeFast(ENABLE_PIN, OUTPUT);
 
-	pinModeFast(MOVELEFT, INPUT);
-	pinModeFast(MOVERIGHT, INPUT);
+	pinModeFast(MOVELEFT_PIN, INPUT);
+	pinModeFast(MOVERIGHT_PIN, INPUT);
+
+	pinModeFast(RAPID_PIN, INPUT);
 
     pinModeFast(LED_BUILTIN, OUTPUT);
 	
     // Pull the enable pin high to disable the driver by default
-	digitalWriteFast(ENABLE, HIGH);
+	digitalWriteFast(ENABLE_PIN, HIGH);
 
 	// Pull the direction pin low to set the default direction
-	digitalWriteFast(DIRECTION, LOW);
+	digitalWriteFast(DIRECTION_PIN, LOW);
 
     // Pull the pulse pin low to set the default state
-	digitalWriteFast(PULSE, LOW);
+	digitalWriteFast(PULSE_PIN, LOW);
 
     // Turn off the status LED for troubleshooting
     digitalWriteFast(LED_BUILTIN, LOW);
@@ -81,21 +86,21 @@ void setup() {
 void loop() { 
     curMicros = micros();
     curMillis = millis();
-    readThreeWaySwitch();
+    readSwitches();
 }
 
-void readThreeWaySwitch() {    
-    if (digitalReadFast(MOVERIGHT) == HIGH) {
+void readSwitches() {    
+    if (digitalReadFast(MOVERIGHT_PIN) == HIGH) {
         moveRightEnabled = true;
         moveLeftEnabled = false;
         enableStepper();
     }
-    else if (digitalReadFast(MOVELEFT) == HIGH) {
+    else if (digitalReadFast(MOVELEFT_PIN) == HIGH) {
         moveLeftEnabled = true;
         moveRightEnabled = false;
         enableStepper();
     }
-    else {  // Disable the motor when the switch is centered.
+    else {  // Disable the motor when the switch is centered and the rapid isn't pressed.
         disableStepper();
     }
 }
@@ -105,12 +110,12 @@ void enableStepper() {
     if (!stepperEnabled) {
         delay(100); //Debounce on state change, for bouncy switches
         stepperEnabled = true; // Set state of switch
-        stepsPerSec = 1; // Acceleration from zero on state change.
-        digitalWriteFast(ENABLE, LOW); // Enable the driver
+        stepsPerSec = 200; // Accelerate on state change.  Set starting value.
+        digitalWriteFast(ENABLE_PIN, LOW); // Enable the driver
     }
 
     //Acceleration
-    if (stepsPerSec < maxStepsPerSec) {  // If it's not already maxed out
+    if (stepsPerSec < maxStepsPerSec) {  // If it's not already at the set speed
         if (curMillis - prevMillis >= accelInterval) { // Acceleration rate per second
             //Increment timers any time we accelerate
             prevMillis = curMillis;
@@ -143,9 +148,9 @@ void disableStepper() {
     }
     else {
         stepperEnabled = false;
-        digitalWriteFast(ENABLE, HIGH);
+        digitalWriteFast(ENABLE_PIN, HIGH);
         digitalWriteFast(LED_BUILTIN, LOW);
-        digitalWriteFast(PULSE, LOW);
+        digitalWriteFast(PULSE_PIN, LOW);
         moveLeftEnabled = false;
         moveRightEnabled = false;
     }
@@ -153,11 +158,11 @@ void disableStepper() {
 
 void actOnSwitch() {
     if (moveRightEnabled == true) {
-        digitalWriteFast(DIRECTION, LOW);
+        digitalWriteFast(DIRECTION_PIN, LOW);
         singleStep();
     }
     if (moveLeftEnabled == true) {
-        digitalWriteFast(DIRECTION, HIGH);
+        digitalWriteFast(DIRECTION_PIN, HIGH);
         singleStep();
     }
 }
@@ -169,8 +174,8 @@ void singleStep() {
         prevStepMicros = curMicros;
 
         //Pulse the driver
-        digitalWriteFast(PULSE, HIGH);
+        digitalWriteFast(PULSE_PIN, HIGH);
         delayMicroseconds(pulseWidthMicroseconds);
-        digitalWriteFast(PULSE, LOW);
+        digitalWriteFast(PULSE_PIN, LOW);
     }
 }
