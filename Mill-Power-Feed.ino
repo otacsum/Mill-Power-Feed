@@ -11,12 +11,12 @@
 #define MOVERIGHT 9
 
 //Stepper Driver Configuration Values
-#define STEPSPERREV 800 // Quarter-stepping (200 full steps => 800 quarter steps per rev)
+#define STEPSPERREV 400 // Half-stepping (200 full steps => 400 half steps per rev)
 #define REVSPERINCH 20 // 2:1 Pulley Reduction, 10 screw turns per inch
 
 // Imperial milling speeds defined in IPM, to be reduced to step pulses.
 // This will be replaced with the rotary encoded values.
-const int DesiredInchesPerMin = 60;
+const int InchesPerMin = 30;
 
 bool moveLeftEnabled = false;
 bool moveRightEnabled = false;
@@ -25,18 +25,19 @@ bool stepperEnabled = false;
 // Timing and pulse variables
 unsigned long curMicros;
 unsigned long prevStepMicros = 0;
-unsigned long microsBetweenSteps = 1; // 1,000,000 micros per second.
-int pulseWidthMicroseconds = 5;
+int microsPerStep; 
+int pulseWidthMicroseconds = 4;
 
-// Calculate steps per second based on desired speed and driver constants.
-int stepsPerSec() {
-    int revsPerMin = DesiredInchesPerMin * REVSPERINCH;
-    int stepsPerMin = revsPerMin * STEPSPERREV;
-    // This isn't CNC, we're not measuirng distances just speed, so lost steps aren't relevant.
-    float stepsPerSec = float(stepsPerMin / 60);
 
-    return stepsPerSec;
-}
+unsigned long microsBetweenSteps() {
+    unsigned long RPM = InchesPerMin * REVSPERINCH;
+    unsigned long stepsPerMin = RPM * STEPSPERREV;
+    unsigned long microsPerMin = 60000000; // Magic number, but it never changes.
+    // This isn't CNC, we're not measuirng distances just speed, remainders aren't relevant.
+    unsigned long microsPerStep = microsPerMin / stepsPerMin;
+
+    return microsPerStep;
+} 
 
 
 void setup() {
@@ -62,14 +63,17 @@ void setup() {
     // Turn off the status LED for troubleshooting
     digitalWriteFast(LED_BUILTIN, LOW);
 
+    microsPerStep = microsBetweenSteps();
+
 
     Serial.begin(9600);
     Serial.println("Power Feed Enabled...");
+    Serial.print("Micros Between Steps: "); Serial.println(microsPerStep);
 }
 
 
 void loop() { 
-    curMillis = millis();
+    curMicros = micros();
     readThreeWaySwitch();
 }
 
@@ -97,7 +101,7 @@ void enableStepper(String direction) {
         delay(100); //Debounce on state change, for bouncy switches
         stepperEnabled = true;
         digitalWriteFast(ENABLE, LOW); // Enable the driver
-        Serial.println("Moving" + direction);
+        Serial.println("Moving " + direction);
     }
 
     actOnSwitch();
@@ -129,7 +133,7 @@ void actOnSwitch() {
 }
 
 void singleStep() {
-    if (curMicros - prevStepMicros >= microsBetweenSteps) {
+    if (curMicros - prevStepMicros >= microsPerStep) {
         prevStepMicros = curMicros;
         digitalWriteFast(PULSE, HIGH);
         delayMicroseconds(pulseWidthMicroseconds);
