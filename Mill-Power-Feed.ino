@@ -11,26 +11,22 @@
 #define MOVERIGHT 9
 
 //Stepper Driver Configuration Values
-#define STEPSPERREV 800 // Quarter-stepping (200 full steps per rev)
+#define STEPSPERREV 800 // Quarter-stepping (200 full steps => 800 quarter steps per rev)
 #define REVSPERINCH 20 // 2:1 Pulley Reduction, 10 screw turns per inch
 
 // Imperial milling speeds defined in IPM, to be reduced to step pulses.
 // This will be replaced with the rotary encoded values.
-const int DesiredInchesPerMin = 1;
+const int DesiredInchesPerMin = 60;
 
 bool moveLeftEnabled = false;
 bool moveRightEnabled = false;
 bool stepperEnabled = false;
 
 // Timing and pulse variables
-unsigned long curMillis;
-unsigned long prevStepMillis = 0;
-unsigned long millisBetweenSteps = 10; // milliseconds
-int pulseWidthMicroseconds = 10;
-
-//Create new instance of a stepper controller
-//1 = bipolar motor on dedicated driver
-//AccelStepper stepMotor(1, PULSE, DIRECTION); 
+unsigned long curMicros;
+unsigned long prevStepMicros = 0;
+unsigned long microsBetweenSteps = 1; // 1,000,000 micros per second.
+int pulseWidthMicroseconds = 5;
 
 // Calculate steps per second based on desired speed and driver constants.
 int stepsPerSec() {
@@ -45,10 +41,13 @@ int stepsPerSec() {
 
 void setup() {
     // Set pin default states
-	pinModeFast(ENABLE, OUTPUT);
+	pinModeFast(PULSE, OUTPUT);
 	pinModeFast(DIRECTION, OUTPUT);
+	pinModeFast(ENABLE, OUTPUT);
+
 	pinModeFast(MOVELEFT, INPUT);
 	pinModeFast(MOVERIGHT, INPUT);
+
     pinModeFast(LED_BUILTIN, OUTPUT);
 	
     // Pull the enable pin high to disable the driver by default
@@ -56,6 +55,9 @@ void setup() {
 
 	// Pull the direction pin low to set the default direction
 	digitalWriteFast(DIRECTION, LOW);
+
+    // Pull the pulse pin low to set the default state
+	digitalWriteFast(PULSE, LOW);
 
     // Turn off the status LED for troubleshooting
     digitalWriteFast(LED_BUILTIN, LOW);
@@ -67,27 +69,24 @@ void setup() {
 
 
 void loop() { 
-    
     curMillis = millis();
     readThreeWaySwitch();
-    actOnSwitch();
-    
 }
 
-void readThreeWaySwitch() {
-    
-    moveLeftEnabled = false;
-    moveRightEnabled = false;
-    
+void readThreeWaySwitch() {    
     if (digitalReadFast(MOVERIGHT) == HIGH) {
-        enableStepper("Right (positive X)");
         moveRightEnabled = true;
+        moveLeftEnabled = false;
+        enableStepper("Right (positive X)");
     }
     else if (digitalReadFast(MOVELEFT) == HIGH) {
-        enableStepper("Left (negative X)");
         moveLeftEnabled = true;
+        moveRightEnabled = false;
+        enableStepper("Left (negative X)");
     }
     else {  // Disable the motor when the switch is centered.
+        moveLeftEnabled = false;
+        moveRightEnabled = false;
         disableStepper();
     }
 }
@@ -95,12 +94,13 @@ void readThreeWaySwitch() {
 //Only toggle the state if it's disabled. Used for debounce
 void enableStepper(String direction) {
     if (!stepperEnabled) {
-        delay(10); //Debounce on state change, for bouncy switches
+        delay(100); //Debounce on state change, for bouncy switches
         stepperEnabled = true;
         digitalWriteFast(ENABLE, LOW); // Enable the driver
-        digitalWriteFast(LED_BUILTIN, HIGH);
         Serial.println("Moving" + direction);
     }
+
+    actOnSwitch();
 }
 
 //Only toggle the state if it's enabled. Used for debounce
@@ -110,8 +110,10 @@ void disableStepper() {
         stepperEnabled = false;
         digitalWriteFast(ENABLE, HIGH);
         digitalWriteFast(LED_BUILTIN, LOW);
+        digitalWriteFast(PULSE, LOW);
         Serial.println();
         Serial.println("Motor Stopped");
+        Serial.println();
     }
 }
 
@@ -127,12 +129,10 @@ void actOnSwitch() {
 }
 
 void singleStep() {
-    if (curMillis - prevStepMillis >= millisBetweenSteps) {
-            // next 2 lines changed 28 Nov 2018
-        //prevStepMillis += millisBetweenSteps;
-        prevStepMillis = curMillis;
+    if (curMicros - prevStepMicros >= microsBetweenSteps) {
+        prevStepMicros = curMicros;
         digitalWriteFast(PULSE, HIGH);
-        delayMicroseconds(pulseWidthMicroseconds); // this line is probably unnecessary?
+        delayMicroseconds(pulseWidthMicroseconds);
         digitalWriteFast(PULSE, LOW);
     }
 }
