@@ -14,12 +14,12 @@
 #define RAPID_PIN 10
 
 //Stepper Driver Configuration Values
-#define STEPSPERREV 200 // Half-stepping (200 full steps => 400 half steps per rev)
+#define STEPSPERREV 400 // Half-stepping (200 full steps => 400 half steps per rev)
 #define REVSPERINCH 20 // 2:1 Pulley Reduction, 10 screw turns per inch
 
 // Imperial milling speeds defined in IPM, to be reduced to step pulses.
 // This will be replaced with the rotary encoded values.
-const long maxInchesPerMin = 1;
+const long maxInchesPerMin = 35;
 
 bool moveLeftEnabled = false;
 bool moveRightEnabled = false;
@@ -29,7 +29,11 @@ bool stepperEnabled = false;
 unsigned long curMicros;
 unsigned long prevStepMicros = 0;
 long microsPerStep; 
-int pulseWidthMicroseconds = 50;
+int pulseWidthMicroseconds = 50; //Pulse width, minimum sent to driver will affect torque negatively.
+
+// Pulse width is a blocking function, so this helps counter it for accurate speeds.
+// Higher numbers = higher speeds
+int calibrationMicros = 8;  
 
 // Acceleration Params
 long stepsPerSec = 0;
@@ -168,7 +172,7 @@ void actOnSwitch() {
 }
 
 void singleStep() {
-    if (curMicros - prevStepMicros >= microsPerStep - pulseWidthMicroseconds) {
+    if (curMicros - prevStepMicros >= microsPerStep - calibrationMicros) {
 
         //Increment timers any time we step
         prevStepMicros = curMicros;
