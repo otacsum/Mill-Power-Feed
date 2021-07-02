@@ -33,7 +33,7 @@ int pulseWidthMicroseconds = 50; //Pulse width, minimum sent to driver will affe
 
 // Pulse width is a blocking function, so this helps counter it for accurate speeds.
 // Higher numbers = higher speeds
-int calibrationMicros = 8;  
+int calibrationMicros = 8;
 
 // Acceleration Params
 long stepsPerSec = 0;
