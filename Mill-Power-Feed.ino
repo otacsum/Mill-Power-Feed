@@ -1,62 +1,13 @@
-//Faster implementation of the pin states for fast stepper movement.
+// Faster implementation of the pin states for fast stepper movement.
 #include <digitalWriteFast.h> 
 
-// Pins used for stepper control signals
-#define PULSE_PIN 5
-#define DIRECTION_PIN 6
-#define ENABLE_PIN 7
+// Hardware and user config parameters.
+#include "configuration.h"
 
-// Pins used for direction signals
-#define MOVELEFT_PIN 8
-#define MOVERIGHT_PIN 9
+// Stepper class
+#include "FastStepper.h"
 
-// Pin used for rapids signal
-#define RAPID_PIN 10
-
-//Stepper Driver Configuration Values
-#define STEPSPERREV 400 // Half-stepping (200 full steps => 400 half steps per rev)
-#define REVSPERINCH 20 // 2:1 Pulley Reduction, 10 screw turns per inch
-
-// Imperial milling speeds defined in IPM, to be reduced to step pulses.
-// This will be replaced with the rotary encoded values.
-const long maxInchesPerMin = 35;
-
-bool moveLeftEnabled = false;
-bool moveRightEnabled = false;
-bool stepperEnabled = false;
-
-// Timing and pulse variables
-unsigned long curMicros;
-unsigned long prevStepMicros = 0;
-long microsPerStep; 
-int pulseWidthMicroseconds = 50; //Pulse width, minimum sent to driver will affect torque negatively.
-
-// Pulse width is a blocking function, so this helps counter it for accurate speeds.
-// Higher numbers = higher speeds
-int calibrationMicros = 8;
-
-// Acceleration Params
-long stepsPerSec = 0;
-long maxStepsPerSec;
-unsigned long curMillis;
-unsigned long prevMillis = 0;
-const long accelInterval = 5;  // Millis
-const long accelRate = 20; // Steps per accel interval
-
-
-
-unsigned long microsBetweenSteps() {
-    unsigned long RPM = maxInchesPerMin * REVSPERINCH;
-    //Using minutes because the truncated remainders are less significant.
-    unsigned long stepsPerMin = RPM * STEPSPERREV;
-    maxStepsPerSec = stepsPerMin / long(60);
-    unsigned long microsPerMin = long(60000000); // Magic number, but it never changes.
-    // This isn't CNC, we're not measuirng distances just speed, remainders aren't relevant.
-    unsigned long microsPerStep = microsPerMin / stepsPerMin;
-
-    return microsPerStep;
-} 
-
+FastStepper feedMotor(maxInchesPerMin, REVSPERINCH, STEPSPERREV);
 
 void setup() {
     // Set pin default states
@@ -68,8 +19,6 @@ void setup() {
 	pinModeFast(MOVERIGHT_PIN, INPUT);
 
 	pinModeFast(RAPID_PIN, INPUT);
-
-    pinModeFast(LED_BUILTIN, OUTPUT);
 	
     // Pull the enable pin high to disable the driver by default
 	digitalWriteFast(ENABLE_PIN, HIGH);
@@ -79,17 +28,12 @@ void setup() {
 
     // Pull the pulse pin low to set the default state
 	digitalWriteFast(PULSE_PIN, LOW);
-
-    // Turn off the status LED for troubleshooting
-    digitalWriteFast(LED_BUILTIN, LOW);
-
-    microsPerStep = microsBetweenSteps();
 }
 
 
 void loop() { 
-    curMicros = micros();
-    curMillis = millis();
+    feedMotor.curMicros = micros();
+    feedMotor.curMillis = millis();
     readSwitches();
 }
 
