@@ -17,7 +17,7 @@
 // Imperial milling speeds defined in IPM, to be reduced to step pulses.
 // This is the maximum rate that can be programmed in using the rotary encoder and...
 // also the maximum speed that will be achieved when traversing in rapid mode.
-const long maxInchesPerMin = 35;
+#define MAXINCHESPERMIN 35
 
 //Pulse width, make this as long as possible without impacting your RPMs
 // Sending the driver's minimum requirement will reduce torque.
@@ -30,3 +30,22 @@ int calibrationMicros = 8;
 // Acceleration Params (linear acceleration)
 const long accelInterval = 5;  // Millis between increasing velocity
 const long accelRate = 20; // Steps increased per accelInterval
+
+
+
+
+
+
+
+
+
+
+
+
+/**
+ * DO NOT MODIFY BELOW THIS LINE
+ * DO NOT MODIFY BELOW THIS LINE
+ * DO NOT MODIFY BELOW THIS LINE
+ */
+
+int controlPins[3] = {PULSE_PIN, DIRECTION_PIN, ENABLE_PIN};

@@ -19,11 +19,11 @@ class FastStepper {
 
         // Acceleration parameters
         unsigned long prevMillis = 0;
-        long stepsPerSec = 0;
+        long currentStepsPerSec = 0;
+        long setStepsPerSec = 0;
+        long startingStepsPerSec = 200;
 
         // Default states
-        bool moveLeftEnabled = false;
-        bool moveRightEnabled = false;
         bool stepperEnabled = false;
         int maxInchesPerMin;
 
@@ -35,11 +35,22 @@ class FastStepper {
         int revolutionsPerInch;
         int stepsPerRevolution;
 
+        // Stepper Driver Pins
+        // [0] = PULSE
+        // [1] = DIRECTION
+        // [2] = ENABLE
+        int controlPins[3];
+
 
     public:
         // Timing and acceleration timers
         unsigned long curMicros;
         unsigned long curMillis;
+
+        // Velocity & Accel States
+        float currentInchesPerMin;
+
+
 
     //Constructor
     FastStepper(int maxIPM, int revsPerInch, int stepsPerRev) {
@@ -51,11 +62,11 @@ class FastStepper {
 
     private:
 
-        long getMaxStepsPerSec(long maxIPM) {
+        long getMaxStepsPerSec(float maxIPM) {
             this->maxStepsPerSec = this->calcStepsPerSec(maxIPM);
         }
 
-        long calcStepsPerSec(long inchesPerMin) {
+        long calcStepsPerSec(float inchesPerMin) {
             // Using minutes because the truncated remainders of 
             // larger numbers are less significant.
             unsigned long RPM = inchesPerMin * this->revolutionsPerInch;
@@ -65,12 +76,119 @@ class FastStepper {
             return stepsPerSec;
         }
         
-        unsigned long microsBetweenSteps(long inchesPerMin) {
-            unsigned long stepsPerSec = this->calcStepsPerSec(inchesPerMin);
-            unsigned long microsPerStep = this->microsPerSec / stepsPerSec;
+        unsigned long microsBetweenSteps() {
+            this->microsPerSec / this->currentStepsPerSec;
+        }
 
-            return microsPerStep;
-        } 
+        void accelerateStepper() {
+            if (this->curMillis - this->prevMillis >= accelInterval) { 
+                //Increment timers any time we accelerate
+                this->prevMillis = this->curMillis;
 
+                // Accelerate until maxed
+                if (this->currentStepsPerSec > this->setStepsPerSec) {
+                    // we overshot slightly on the last loop, correct it
+                    this->currentStepsPerSec = this->setStepsPerSec;
+                }
+                else {
+                    this->currentStepsPerSec += accelRate;
+                }
+                
+                this->microsBetweenSteps();
+            }
+        }
 
+        void decelerateStepper() {
+            if (this->curMillis - this->prevMillis >= accelInterval) { 
+                //Increment timers any time we accelerate
+                this->prevMillis = this->curMillis;
+
+                // Decelerate until set speed or 0
+                if (this->currentStepsPerSec < this->setStepsPerSec) {
+                    // we overshot slightly on the last loop, correct it
+                    this->currentStepsPerSec = this->setStepsPerSec;
+                }
+                else {
+                    this->currentStepsPerSec -= accelRate;
+                }
+                
+                this->microsBetweenSteps();
+            }
+        }
+
+        void step() {
+            // If the elapsed time since last step is enough, step again
+            if (this->curMicros - this->prevMicros 
+                        >= 
+                        this->microsPerStep - calibrationMicros) {
+                //Increment timers any time we step
+                this->prevMicros = this->curMicros;
+
+                //Pulse the driver
+                digitalWriteFast(this->controlPins[0], HIGH);
+                delayMicroseconds(pulseWidthMicroseconds);
+                digitalWriteFast(this->controlPins[0], LOW);
+            }
+        }
+
+    public:
+
+        void begin(int pins[]) {
+            // Set pin default states
+            for (int i = 0; i < 3; i++) {
+                pinModeFast(pins[i], OUTPUT);
+                this->controlPins[i] = pins[i];
+            }
+        }
+
+        void setSpeed(float inchesPerMin) {
+            this->setStepsPerSec = this->calcStepsPerSec(inchesPerMin);
+        }
+
+        void setDirection(char direction) {
+            if (direction == "right") {
+                digitalWriteFast(this->controlPins[1], HIGH);
+            }
+            else {  // "left" or any invalid value deenergizes the direction pin
+                digitalWriteFast(this->controlPins[1], LOW);
+            }
+        }
+
+        void run() {
+            if (!this->stepperEnabled) {
+                delay(100); //Debounce on state change, for bouncy switches
+                this->stepperEnabled = true;
+                this->currentStepsPerSec = this->startingStepsPerSec; // Set minimum startup speed
+                digitalWriteFast(this->controlPins[2], LOW); // Enable the driver
+            }
+
+            // If it's not already at the set speed, keep accelerating
+            if (this->currentStepsPerSec < this->setStepsPerSec) {
+                this->accelerateStepper();      
+            }
+            // If a new slower speed was entered, decelerate to it
+            else if (this->currentStepsPerSec > this->setStepsPerSec) {
+                this->decelerateStepper();
+            }
+                
+            this->step();           
+        }
+
+        void stop() {
+            if (this->stepperEnabled) {
+                delay(100); //Debounce on state change, for bouncy switches
+                this->stepperEnabled = false;
+                this->setStepsPerSec = 0;
+            }
+            
+            // If it's still moving, decelerate to 0
+            if (this->currentStepsPerSec > this->setStepsPerSec) {
+                this->decelerateStepper();
+                this->step();
+            }
+            else {
+                digitalWriteFast(this->controlPins[2], HIGH); // Disable the driver
+                digitalWriteFast(this->controlPins[0], LOW); // Make sure the pulse pin is off
+            } 
+        }
 };
