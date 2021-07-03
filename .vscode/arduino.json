@@ -1,4 +1,3 @@
 {
-    "sketch": "Mill-Power-Feed.ino",
     "board": "arduino:avr:uno"
 }

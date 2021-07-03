@@ -26,11 +26,13 @@ class FastStepper {
         // Acceleration parameters
         unsigned long prevMillis = 0;
         long currentStepsPerSec = 0;
+        long prevStepsPerSec = 0;
         long setStepsPerSec = 0;
         long startingStepsPerSec = 200;
 
         // Default states
         bool stepperEnabled = false;
+        bool doOnceWhenStopped = false;
         int maxInchesPerMin;
 
         // Time standards
@@ -151,26 +153,37 @@ class FastStepper {
             this->setStepsPerSec = this->calcStepsPerSec(inchesPerMin);
         }
 
-        void setDirection(char direction) {
-            if (direction == "right") {
-                digitalWriteFast(this->controlPins[1], HIGH);
-            }
-            else {  // "left" or any invalid value deenergizes the direction pin
+        void setDirection(bool direction) {
+            if (!direction) { // Any falsy value deenergizes the direction pin, let's call this the default direction.
                 digitalWriteFast(this->controlPins[1], LOW);
+                
+                if (DEBUG) {
+                    Serial.println("Direction: Left");
+                }   
+            }
+            else {  
+                digitalWriteFast(this->controlPins[1], HIGH);
+
+                if (DEBUG) {
+                    Serial.println("Direction: Right");
+                }  
             }
         }
 
-        void run() {
+        void run(bool direction) {
             if (!this->stepperEnabled) {
-                delay(20); //Debounce on state change, for bouncy switches
+                delay(100); //Debounce on state change, for bouncy switches
+                this->setDirection(direction);
                 this->stepperEnabled = true;
                 this->currentStepsPerSec = this->startingStepsPerSec; // Set minimum startup speed
                 digitalWriteFast(this->controlPins[2], LOW); // Enable the driver
 
                 if (DEBUG) {
+                    Serial.println("RUN:");
                     Serial.print("Max Steps / Sec: "); Serial.println(this->maxStepsPerSec);
                     Serial.print("Set Steps / Sec: "); Serial.println(this->setStepsPerSec);
                     Serial.print("Enabled: "); Serial.println(this->stepperEnabled);
+                    Serial.println();
                 }                
             }
 
@@ -187,8 +200,10 @@ class FastStepper {
         }
 
         void stop() {
-            if (this->stepperEnabled) {
-                delay(20); //Debounce on state change, for bouncy switches
+            // Manage states on change
+            if (this->stepperEnabled) {  
+                this->doOnceWhenStopped = true;  // Set flag, used to reduce redundant processing.
+                this->prevStepsPerSec = this->setStepsPerSec; // Remember speed after stopping.
                 this->stepperEnabled = false;
                 this->setStepsPerSec = 0;
             }
@@ -198,14 +213,19 @@ class FastStepper {
                 this->decelerateStepper();
                 this->step();
             }
-            else { // Stopped
+            else if (this->doOnceWhenStopped && this->currentStepsPerSec == 0) { // Stopped, do these things once.
+                delay(100); // Debounce
+                this->doOnceWhenStopped = false;  // Reset flag, used to reduce redundant processing.
                 digitalWriteFast(this->controlPins[2], HIGH); // Disable the driver
                 digitalWriteFast(this->controlPins[0], LOW); // Make sure the pulse pin is off
+                this->setStepsPerSec = this->prevStepsPerSec;  //Reset speed in case we start again.
 
                 if (DEBUG) {
+                    Serial.println("RUN:");
                     Serial.print("Max Steps / Sec: "); Serial.println(this->maxStepsPerSec);
                     Serial.print("Set Steps / Sec: "); Serial.println(this->setStepsPerSec);
                     Serial.print("Enabled: "); Serial.println(this->stepperEnabled);
+                    Serial.println();
                 } 
             } 
         }
@@ -248,12 +268,10 @@ void loop() {
 
 void readSwitches() {    
     if (digitalReadFast(MOVERIGHT_PIN) == HIGH) {
-        feedMotor.setDirection("right");
-        feedMotor.run();
+        feedMotor.run(1); // Clockwise
     }
     else if (digitalReadFast(MOVELEFT_PIN) == HIGH) {
-        feedMotor.setDirection("left");
-        feedMotor.run();
+        feedMotor.run(0); // Counter-Clockwise
     }
     else {  // Disable the motor when the switch is centered and the rapid isn't pressed.
         feedMotor.stop();
