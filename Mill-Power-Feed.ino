@@ -63,13 +63,13 @@ class FastStepper {
         this->maxInchesPerMin = maxIPM;
         this->revolutionsPerInch = revsPerInch;
         this->stepsPerRevolution = stepsPerRev;
-        this->maxStepsPerSec = this->getMaxStepsPerSec(maxInchesPerMin);
+        this->maxStepsPerSec = this->getMaxStepsPerSec(maxIPM);
     }
 
     private:
 
         long getMaxStepsPerSec(float maxIPM) {
-            this->maxStepsPerSec = this->calcStepsPerSec(maxIPM);
+            return this->calcStepsPerSec(maxIPM);
         }
 
         long calcStepsPerSec(float inchesPerMin) {
@@ -83,7 +83,7 @@ class FastStepper {
         }
         
         unsigned long microsBetweenSteps() {
-            this->microsPerSec / this->currentStepsPerSec;
+            this->microsPerStep = this->microsPerSec / this->currentStepsPerSec;
         }
 
         void accelerateStepper() {
@@ -162,10 +162,16 @@ class FastStepper {
 
         void run() {
             if (!this->stepperEnabled) {
-                delay(100); //Debounce on state change, for bouncy switches
+                delay(20); //Debounce on state change, for bouncy switches
                 this->stepperEnabled = true;
                 this->currentStepsPerSec = this->startingStepsPerSec; // Set minimum startup speed
                 digitalWriteFast(this->controlPins[2], LOW); // Enable the driver
+
+                if (DEBUG) {
+                    Serial.print("Max Steps / Sec: "); Serial.println(this->maxStepsPerSec);
+                    Serial.print("Set Steps / Sec: "); Serial.println(this->setStepsPerSec);
+                    Serial.print("Enabled: "); Serial.println(this->stepperEnabled);
+                }                
             }
 
             // If it's not already at the set speed, keep accelerating
@@ -182,7 +188,7 @@ class FastStepper {
 
         void stop() {
             if (this->stepperEnabled) {
-                delay(100); //Debounce on state change, for bouncy switches
+                delay(20); //Debounce on state change, for bouncy switches
                 this->stepperEnabled = false;
                 this->setStepsPerSec = 0;
             }
@@ -192,9 +198,15 @@ class FastStepper {
                 this->decelerateStepper();
                 this->step();
             }
-            else {
+            else { // Stopped
                 digitalWriteFast(this->controlPins[2], HIGH); // Disable the driver
                 digitalWriteFast(this->controlPins[0], LOW); // Make sure the pulse pin is off
+
+                if (DEBUG) {
+                    Serial.print("Max Steps / Sec: "); Serial.println(this->maxStepsPerSec);
+                    Serial.print("Set Steps / Sec: "); Serial.println(this->setStepsPerSec);
+                    Serial.print("Enabled: "); Serial.println(this->stepperEnabled);
+                } 
             } 
         }
 };
@@ -202,6 +214,10 @@ class FastStepper {
 FastStepper feedMotor(MAXINCHESPERMIN, REVSPERINCH, STEPSPERREV);
 
 void setup() {
+    if (DEBUG) { // Debugging
+        Serial.begin(9600);  
+    }
+
     //Initialize the pin outputs
     feedMotor.begin(controlPins);
 
