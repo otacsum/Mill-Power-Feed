@@ -26,7 +26,6 @@ class FastStepper {
         // Acceleration parameters
         unsigned long prevMillis = 0;
         long currentStepsPerSec = 0;
-        long prevStepsPerSec = 0;
         long setStepsPerSec = 0;
         long startingStepsPerSec = 200;
 
@@ -88,15 +87,15 @@ class FastStepper {
             this->microsPerStep = this->microsPerSec / this->currentStepsPerSec;
         }
 
-        void accelerateStepper() {
+        void accelerateTo(long stepsPerSec) {
             if (this->curMillis - this->prevMillis >= accelInterval) { 
                 //Increment timers any time we accelerate
                 this->prevMillis = this->curMillis;
 
                 // Accelerate until maxed
-                if (this->currentStepsPerSec > this->setStepsPerSec) {
+                if (this->currentStepsPerSec > stepsPerSec) {
                     // we overshot slightly on the last loop, correct it
-                    this->currentStepsPerSec = this->setStepsPerSec;
+                    this->currentStepsPerSec = stepsPerSec;
                 }
                 else {
                     this->currentStepsPerSec += accelRate;
@@ -106,15 +105,15 @@ class FastStepper {
             }
         }
 
-        void decelerateStepper() {
+        void decelerateTo(long stepsPerSec) {
             if (this->curMillis - this->prevMillis >= accelInterval) { 
                 //Increment timers any time we accelerate
                 this->prevMillis = this->curMillis;
 
                 // Decelerate until set speed or 0
-                if (this->currentStepsPerSec < this->setStepsPerSec) {
+                if (this->currentStepsPerSec < stepsPerSec) {
                     // we overshot slightly on the last loop, correct it
-                    this->currentStepsPerSec = this->setStepsPerSec;
+                    this->currentStepsPerSec = stepsPerSec;
                 }
                 else {
                     this->currentStepsPerSec -= accelRate;
@@ -172,10 +171,13 @@ class FastStepper {
 
         void run(bool direction) {
             if (!this->stepperEnabled) {
-                delay(100); //Debounce on state change, for bouncy switches
+                //delay(50); //Debounce on state change, for bouncy switches
                 this->setDirection(direction);
                 this->stepperEnabled = true;
-                this->currentStepsPerSec = this->startingStepsPerSec; // Set minimum startup speed
+                if (this->currentStepsPerSec < this->startingStepsPerSec) {
+                    this->currentStepsPerSec = this->startingStepsPerSec; // Set minimum startup speed
+                }
+                
                 digitalWriteFast(this->controlPins[2], LOW); // Enable the driver
 
                 if (DEBUG) {
@@ -189,11 +191,11 @@ class FastStepper {
 
             // If it's not already at the set speed, keep accelerating
             if (this->currentStepsPerSec < this->setStepsPerSec) {
-                this->accelerateStepper();      
+                this->accelerateTo(this->setStepsPerSec);      
             }
             // If a new slower speed was entered, decelerate to it
             else if (this->currentStepsPerSec > this->setStepsPerSec) {
-                this->decelerateStepper();
+                this->decelerateTo(this->setStepsPerSec);
             }
                 
             this->step();           
@@ -203,25 +205,21 @@ class FastStepper {
             // Manage states on change
             if (this->stepperEnabled) {  
                 this->doOnceWhenStopped = true;  // Set flag, used to reduce redundant processing.
-                this->prevStepsPerSec = this->setStepsPerSec; // Remember speed after stopping.
                 this->stepperEnabled = false;
-                this->setStepsPerSec = 0;
             }
             
             // If it's still moving, decelerate to 0
-            if (this->currentStepsPerSec > this->setStepsPerSec) {
-                this->decelerateStepper();
+            if (this->currentStepsPerSec > 0) {
+                this->decelerateTo(0);
                 this->step();
             }
             else if (this->doOnceWhenStopped && this->currentStepsPerSec == 0) { // Stopped, do these things once.
-                delay(100); // Debounce
                 this->doOnceWhenStopped = false;  // Reset flag, used to reduce redundant processing.
                 digitalWriteFast(this->controlPins[2], HIGH); // Disable the driver
                 digitalWriteFast(this->controlPins[0], LOW); // Make sure the pulse pin is off
-                this->setStepsPerSec = this->prevStepsPerSec;  //Reset speed in case we start again.
 
                 if (DEBUG) {
-                    Serial.println("RUN:");
+                    Serial.println("STOP:");
                     Serial.print("Max Steps / Sec: "); Serial.println(this->maxStepsPerSec);
                     Serial.print("Set Steps / Sec: "); Serial.println(this->setStepsPerSec);
                     Serial.print("Enabled: "); Serial.println(this->stepperEnabled);

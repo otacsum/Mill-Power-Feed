@@ -2,7 +2,7 @@
 // Note the serial log blocking time will affect RPMs,
 // serial logging cannot be used to diagnose RPM inaccuracies, 
 // you must use an external tachometer.
-bool DEBUG = true;  
+bool DEBUG = false;  
 
 // Pins used for stepper control signals
 #define PULSE_PIN 5
