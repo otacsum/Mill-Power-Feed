@@ -27,7 +27,7 @@ class FastStepper {
         unsigned long prevMillis = 0;
         long currentStepsPerSec = 0;
         long setStepsPerSec = 0;
-        long startingStepsPerSec = 200;
+        long startingStepsPerSec = 50;
 
         // Default states
         bool stepperEnabled = false;
@@ -213,7 +213,7 @@ class FastStepper {
                 this->decelerateTo(0);
                 this->step();
             }
-            else if (this->doOnceWhenStopped && this->currentStepsPerSec == 0) { // Stopped, do these things once.
+            else if (this->doOnceWhenStopped && this->currentStepsPerSec <= 0) { // Stopped, do these things once.
                 this->doOnceWhenStopped = false;  // Reset flag, used to reduce redundant processing.
                 digitalWriteFast(this->controlPins[2], HIGH); // Disable the driver
                 digitalWriteFast(this->controlPins[0], LOW); // Make sure the pulse pin is off
@@ -230,6 +230,8 @@ class FastStepper {
 };
 
 FastStepper feedMotor(MAXINCHESPERMIN, REVSPERINCH, STEPSPERREV);
+
+float encodedInchesPerMin = MAXINCHESPERMIN;
 
 void setup() {
     if (DEBUG) { // Debugging
@@ -254,7 +256,7 @@ void setup() {
     // Pull the pulse pin low to set the default state
 	digitalWriteFast(PULSE_PIN, LOW);
 
-    feedMotor.setSpeed(MAXINCHESPERMIN);
+    feedMotor.setSpeed(encodedInchesPerMin);
 }
 
 
@@ -274,4 +276,15 @@ void readSwitches() {
     else {  // Disable the motor when the switch is centered and the rapid isn't pressed.
         feedMotor.stop();
     }
+
+    /* if (digitalReadFast(RAPID_PIN) == HIGH) {
+        feedMotor.setSpeed(MAXINCHESPERMIN);
+        
+        if (DEBUG) {
+            Serial.println("Rapid: On");
+        } 
+    }
+    else {
+        feedMotor.setSpeed(encodedInchesPerMin);
+    } */
 }
