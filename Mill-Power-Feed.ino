@@ -229,6 +229,29 @@ class FastStepper {
         }
 };
 
+/**
+ * Three-Way-Switch class for changing the direction of the power feed
+ * --------------------------------------------------------------------
+ * 
+ * The particular switch I'm using is very bouncy, and needs async monitoring
+ * to debounce it and mitigate any bugs related to bouncing.
+ */ 
+class ThreeWaySwitch {
+
+};
+
+/**
+ * Momentary-Switch class for changing RPMs to max for 'rapid' function
+ * --------------------------------------------------------------------
+ * 
+ * Real-time monitoring of the momentary switch has negative consequences to
+ * stepper pulse and RPM accuracy.  Containing states of this switch in an
+ * object mitigates these performance concerns.
+ */ 
+class ThreeWaySwitch {
+
+};
+
 FastStepper feedMotor(MAXINCHESPERMIN, REVSPERINCH, STEPSPERREV);
 
 void setup() {
