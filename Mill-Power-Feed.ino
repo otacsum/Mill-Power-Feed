@@ -29,7 +29,7 @@ class FastStepper {
         long setStepsPerSec = 0;
         long startingStepsPerSec = 50;
 
-        // Default states
+        // State management
         bool stepperEnabled = false;
         bool doOnceWhenStopped = false;
         int maxInchesPerMin;
@@ -238,6 +238,7 @@ class FastStepper {
  */ 
 class ThreeWaySwitch {
 
+
 };
 
 /**
@@ -248,27 +249,93 @@ class ThreeWaySwitch {
  * stepper pulse and RPM accuracy.  Containing states of this switch in an
  * object mitigates these performance concerns.
  */ 
-class ThreeWaySwitch {
+class MomentarySwitch {
+    private:
+        // Debounce params
+        unsigned long lastDebounceTime = 0;  // the last time the output pin was toggled
+        unsigned long debounceDelay = 50;    // millis, increase if still bouncy
 
+        // State management
+        int currButtonState;
+        int prevButtonState = LOW;
+
+        // Stepper Object References
+        FastStepper &feedMotor;
+        float inchesPerMin;
+
+        // Hardware config
+        int INPUT_PIN;
+
+    public:
+        // Debounce params
+        unsigned long curMillis;
+
+        // Constructor
+        MomentarySwitch() {};
+
+        void begin(int pin, FastStepper* motor, float inchesPerMin) {
+            // Set pin default state
+            pinModeFast(pin, INPUT);
+            this->INPUT_PIN = pin;
+
+            // Set object references
+            this->feedMotor = *motor;
+            this->inchesPerMin = inchesPerMin;
+        }
+
+        void readButton() {
+            int buttonReading = digitalReadFast(INPUT_PIN);
+
+            // Switch state changed, is it bouncing?
+            if (buttonReading != prevButtonState) {
+                lastDebounceTime = millis(); // Reset the timer
+            }
+
+            if ((millis() - lastDebounceTime) > debounceDelay) {
+                // Button has changed, not bouncing anymore
+                if (buttonReading != currButtonState) {
+                    currButtonState = buttonReading; // Reset the state
+
+                    if (currButtonState == HIGH) {
+                        feedMotor.setSpeed(MAXINCHESPERMIN);
+
+                        if (DEBUG) {
+                            Serial.println("Speed: RAPID");
+                        } 
+                    }
+                    else {
+                        feedMotor.setSpeed(inchesPerMin);
+                        
+                        if (DEBUG) {
+                            Serial.println("Speed: RAPID");
+                        }
+                    }
+                }
+            }
+        }
 };
 
 FastStepper feedMotor(MAXINCHESPERMIN, REVSPERINCH, STEPSPERREV);
+MomentarySwitch rapidButton;
 
-float encodedInchesPerMin = MAXINCHESPERMIN;
+
+float encodedInchesPerMin = 2;
 
 void setup() {
     if (DEBUG) { // Debugging
         Serial.begin(9600);  
     }
 
+    // Set defaults
+    feedMotor.setSpeed(encodedInchesPerMin);
+
     //Initialize the pin outputs
     feedMotor.begin(controlPins);
+    rapidButton.begin(RAPID_PIN, &feedMotor, encodedInchesPerMin);
 
     // Set pin default states
 	pinModeFast(MOVELEFT_PIN, INPUT);
 	pinModeFast(MOVERIGHT_PIN, INPUT);
-
-	pinModeFast(RAPID_PIN, INPUT);
 	
     // Pull the enable pin high to disable the driver by default
 	digitalWriteFast(ENABLE_PIN, HIGH);
@@ -278,8 +345,6 @@ void setup() {
 
     // Pull the pulse pin low to set the default state
 	digitalWriteFast(PULSE_PIN, LOW);
-
-    feedMotor.setSpeed(encodedInchesPerMin);
 }
 
 
@@ -287,6 +352,7 @@ void loop() {
     feedMotor.curMicros = micros();
     feedMotor.curMillis = millis();
     readSwitches();
+    rapidButton.readButton();
 }
 
 void readSwitches() {    
@@ -299,15 +365,4 @@ void readSwitches() {
     else {  // Disable the motor when the switch is centered and the rapid isn't pressed.
         feedMotor.stop();
     }
-
-    /* if (digitalReadFast(RAPID_PIN) == HIGH) {
-        feedMotor.setSpeed(MAXINCHESPERMIN);
-        
-        if (DEBUG) {
-            Serial.println("Rapid: On");
-        } 
-    }
-    else {
-        feedMotor.setSpeed(encodedInchesPerMin);
-    } */
 }
