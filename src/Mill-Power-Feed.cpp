@@ -121,7 +121,7 @@ class FastStepper {
                         >= 
                         this->microsPerStep - calibrationMicros) {
                 //Increment timers any time we step
-                this->prevMicros = micros();
+                this->prevMicros += this->microsPerStep;
 
                 //Pulse the driver
                 digitalWriteFast(this->controlPins[0], HIGH);
@@ -309,7 +309,7 @@ class ThreeWaySwitch {
 
         void read() {
             if ((millis() - this->lastReadMillis) > SWITCHREADDELAY) {
-                this->lastReadMillis = millis();
+                this->lastReadMillis += SWITCHREADDELAY;
 
                 // Debounce doesn't care which side it's switched to
                 // We're looking for change in state from low to high
@@ -441,7 +441,7 @@ class MomentarySwitch {
         void read() {
             // Only read once every N millis, not on every loop
             if ((millis() - this->lastReadMillis) > SWITCHREADDELAY) {
-                this->lastReadMillis = millis();
+                this->lastReadMillis += SWITCHREADDELAY;
 
                 int buttonReading = digitalReadFast(this->INPUT_PIN);
 
