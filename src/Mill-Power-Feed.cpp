@@ -1,10 +1,12 @@
+// Core Arduino libraries
 #include <Arduino.h>
+// Faster implementation of the pin states for fast stepper movement.
+#include <digitalWriteFast.h> 
 
 // Hardware and user config parameters.
 #include "configuration.h"
 
-// Faster implementation of the pin states for fast stepper movement.
-#include <digitalWriteFast.h> 
+
 
 /**
 * Fast stepper class for driving the power feed.
