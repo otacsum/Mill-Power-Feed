@@ -249,16 +249,19 @@ class FastStepper {
  */ 
 class ThreeWaySwitch {
     private:
+        // Don't read on every loop
+        unsigned long lastReadMillis = 0;
+        
         // Debounce params
         unsigned long lastDebounceTime = 0;  // the last time the output pin was toggled
         unsigned long debounceDelay;    // millis, increase during init if still bouncy
 
         // State management
         int lastSwitchState = LOW;
-        int currSwitchState = HIGH;
+        int currSwitchState = LOW;
 
         // Safety Flag - Cannot start if switch is on at boot
-        bool runEnabled = true;
+        bool runEnabled = false;
 
         // Stepper Object References
         FastStepper* feedMotor;
@@ -303,67 +306,70 @@ class ThreeWaySwitch {
         }
 
         void read() {
-            // Debounce doesn't care which side it's switched to
-            // We're looking for change in state from low to high
-            // on either pin
-            int switchReading;
-            
-            // Using elseif here due to delays caused by sequential reads
-            if (digitalReadFast(this->RIGHT_PIN) == HIGH
-                    || 
-                    digitalReadFast(this->LEFT_PIN) == HIGH) {
-                switchReading = HIGH;
-            }
-            else {
-                switchReading = LOW;
-            }
-/*
+            if ((millis() - this->lastReadMillis) > SWITCHREADDELAY) {
+                this->lastReadMillis = millis();
 
-            // Switch state changed, is it bouncing?
-            if (switchReading != this->lastSwitchState) {
-                this->lastDebounceTime = millis(); // Reset the timer
-                if (DEBUG) {
-                    Serial.print(".");  // Visualize bouncing in monitor
-                } 
-            }
- 
-            if ((millis() - this->lastDebounceTime) > this->debounceDelay) {
-                // Button has changed, not bouncing anymore
-                if (switchReading != this->currSwitchState) {
-                    this->currSwitchState = switchReading; // Reset the state
-
-                    if (this->currSwitchState == HIGH) { // Switch is on
-                        // TODO: Add LCD Status Symbols
-                        
-                        if (digitalReadFast(this->RIGHT_PIN) == HIGH) {
-                            this->feedMotor->setDirection(1); // Clockwise (relative)
-                        }
-                        else if (digitalReadFast(this->LEFT_PIN) == HIGH) {
-                            this->feedMotor->setDirection(0); // Counter-Clockwise (relative)
-                        }
-
-                        if (DEBUG) {
-                            if (this->runEnabled) {
-                                Serial.println("Direction Switch: ON");
-                            }
-                            else {
-                                Serial.println("Direction Switch: Suppressed for Safety");
-                            }
-                        } 
-                    }
-                    else { // Switch is off
-                        // Enable safety flag if it was previously suppressed
-                        if (!this->runEnabled) {
-                            this->runEnabled = true;
-                        }
-                        
-                        if (DEBUG) {
-                            Serial.println("Direction Switch: OFF");
-                        }
-                    }
+                // Debounce doesn't care which side it's switched to
+                // We're looking for change in state from low to high
+                // on either pin
+                int switchReading;
+                
+                // Using elseif here due to delays caused by sequential reads
+                if (digitalReadFast(this->RIGHT_PIN) == HIGH
+                        || 
+                        digitalReadFast(this->LEFT_PIN) == HIGH) {
+                    switchReading = HIGH;
                 }
-            } 
-        this->lastSwitchState = switchReading;  // Store the state */
+                else {
+                    switchReading = LOW;
+                }
+
+                // Switch state changed, is it bouncing?
+                if (switchReading != this->lastSwitchState) {
+                    this->lastDebounceTime = millis(); // Reset the timer
+                    if (DEBUG) {
+                        Serial.print(".");  // Visualize bouncing in monitor
+                    } 
+                }
+    
+                if ((millis() - this->lastDebounceTime) > this->debounceDelay) {
+                    // Button has changed, not bouncing anymore
+                    if (switchReading != this->currSwitchState) {
+                        this->currSwitchState = switchReading; // Reset the state
+
+                        if (this->currSwitchState == HIGH) { // Switch is on
+                            // TODO: Add LCD Status Symbols
+                            
+                            if (digitalReadFast(this->RIGHT_PIN) == HIGH) {
+                                this->feedMotor->setDirection(1); // Clockwise (relative)
+                            }
+                            else if (digitalReadFast(this->LEFT_PIN) == HIGH) {
+                                this->feedMotor->setDirection(0); // Counter-Clockwise (relative)
+                            }
+
+                            if (DEBUG) {
+                                if (this->runEnabled) {
+                                    Serial.println("Direction Switch: ON");
+                                }
+                                else {
+                                    Serial.println("Direction Switch: Suppressed for Safety");
+                                }
+                            } 
+                        }
+                        else { // Switch is off
+                            // Enable safety flag if it was previously suppressed
+                            if (!this->runEnabled) {
+                                this->runEnabled = true;
+                            }
+                            
+                            if (DEBUG) {
+                                Serial.println("Direction Switch: OFF");
+                            }
+                        }
+                    }
+                } 
+            this->lastSwitchState = switchReading;  // Store the state
+            }
         }
 
         void run() {
@@ -386,6 +392,9 @@ class ThreeWaySwitch {
  */ 
 class MomentarySwitch {
     private:
+        // Don't read on every loop
+        unsigned long lastReadMillis = 0;
+
         // Debounce params
         unsigned long lastDebounceTime = 0;  // the last time the output pin was toggled
         unsigned long debounceDelay;    // millis, increase during init if still bouncy
@@ -428,38 +437,44 @@ class MomentarySwitch {
         }
 
         void read() {
-            int buttonReading = digitalReadFast(this->INPUT_PIN);
+            // Only read once every N millis, not on every loop
+            if ((millis() - this->lastReadMillis) > SWITCHREADDELAY) {
+                this->lastReadMillis = millis();
 
-            // Switch state changed, is it bouncing?
-            if (buttonReading != this->lastButtonState) {
-                this->lastDebounceTime = millis(); // Reset the timer
-                if (DEBUG) {
-                    Serial.print(".");
-                } 
-            }
+                int buttonReading = digitalReadFast(this->INPUT_PIN);
 
-            if ((millis() - this->lastDebounceTime) > this->debounceDelay) {
-                // Button has changed, not bouncing anymore
-                if (buttonReading != this->currButtonState) {
-                    this->currButtonState = buttonReading; // Reset the state
+                // Switch state changed, is it bouncing?
+                if (buttonReading != this->lastButtonState) {
+                    this->lastDebounceTime = millis(); // Reset the timer
+                    if (DEBUG) {
+                        Serial.print(".");
+                    } 
+                }
 
-                    if (this->currButtonState == HIGH) {
-                        this->feedMotor->setSpeed(MAXINCHESPERMIN);
+                if ((millis() - this->lastDebounceTime) > this->debounceDelay) {
+                    // Button has changed, not bouncing anymore
+                    if (buttonReading != this->currButtonState) {
+                        this->currButtonState = buttonReading; // Reset the state
 
-                        if (DEBUG) {
-                            Serial.println("Speed: RAPID");
-                        } 
-                    }
-                    else {
-                        this->feedMotor->setSpeed(inchesPerMin);
-                        
-                        if (DEBUG) {
-                            Serial.println("Speed: SLOW");
+                        if (this->currButtonState == HIGH) {
+                            this->feedMotor->setSpeed(MAXINCHESPERMIN);
+
+                            if (DEBUG) {
+                                Serial.println("Speed: RAPID");
+                            } 
+                        }
+                        else {
+                            this->feedMotor->setSpeed(inchesPerMin);
+                            
+                            if (DEBUG) {
+                                Serial.println("Speed: SLOW");
+                            }
                         }
                     }
                 }
+                // Save the state
+                this->lastButtonState = buttonReading;
             }
-        this->lastButtonState = buttonReading;
         }
 };
 
@@ -468,7 +483,7 @@ ThreeWaySwitch directionSwitch(&stepper, DEBOUNCEMILLIS3WAY);
 MomentarySwitch rapidButton(&stepper, DEBOUNCEMILLISMOMENTARY);
 
 
-float encodedInchesPerMin = 50;
+float encodedInchesPerMin = 20;
 
 void setup() {
     if (DEBUG) { // Debugging
@@ -486,7 +501,7 @@ void setup() {
 
 
 void loop() { 
-    //directionSwitch.run();
+    directionSwitch.run();
     directionSwitch.read();
-    //rapidButton.read();
+    rapidButton.read();
 }

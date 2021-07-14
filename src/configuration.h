@@ -2,7 +2,7 @@
 // Note the serial log blocking time will affect RPMs,
 // serial logging cannot be used to diagnose RPM inaccuracies, 
 // you must use an external tachometer.
-bool DEBUG = true;  
+bool DEBUG = false;  
 
 // Pins used for stepper control signals
 #define PULSE_PIN 5
@@ -25,9 +25,17 @@ bool DEBUG = true;
 // also the maximum speed that will be achieved when traversing in rapid mode.
 #define MAXINCHESPERMIN 50
 
+
+
+
+/********* ADVANCED CONFIGURATION SETTINGS **********/
+
 // Non-blocking delay in millis for debouncing switch state change
 #define DEBOUNCEMILLISMOMENTARY 20
 #define DEBOUNCEMILLIS3WAY 20
+
+// Delay in millis for infrequent reading of switches to help motor run more efficiently.
+#define SWITCHREADDELAY 50
 
 // Motor pulse width, make this as long as possible without impacting your RPMs
 // Sending the driver's minimum requirement will reduce torque.
@@ -47,16 +55,18 @@ const long accelRate = 20; // Steps increased per accelInterval
 
 
 
-
-
-
-
-
 /**
  * DO NOT MODIFY BELOW THIS LINE
  * DO NOT MODIFY BELOW THIS LINE
  * DO NOT MODIFY BELOW THIS LINE
  */
+
+
+
+
+
+
+
 
 int stepperControlPins[3] = {PULSE_PIN, DIRECTION_PIN, ENABLE_PIN};
 int threeWayPins[2] = {MOVELEFT_PIN, MOVERIGHT_PIN};
