@@ -66,18 +66,19 @@ class MomentarySwitch {
                         this->currButtonState = buttonReading; // Reset the state
 
                         if (this->currButtonState == HIGH) {
-                            this->feedMotor->setSpeed(MAXINCHESPERMIN);
 
                             if (DEBUG) {
-                                Serial.println("Speed: RAPID");
+                                Serial.print("RAPID: ");
                             } 
+
+                            this->feedMotor->setSpeed(MAXINCHESPERMIN);
                         }
                         else {
-                            this->feedMotor->setSpeed(encodedInchesPerMin);
-                            
                             if (DEBUG) {
-                                Serial.println("Speed: SLOW");
+                                Serial.print("SLOW: ");
                             }
+
+                            this->feedMotor->setSpeed(encodedInchesPerMin);
                         }
                     }
                 }

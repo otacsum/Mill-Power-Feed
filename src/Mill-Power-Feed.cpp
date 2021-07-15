@@ -44,5 +44,5 @@ void loop() {
     directionSwitch.run();
     directionSwitch.read();
     rapidButton.read();
-    logRotaryEncoder();
+    //logRotaryEncoder(); Disabled, unneeded at this time.
 }

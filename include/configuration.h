@@ -29,7 +29,9 @@ bool DEBUG = false;
 #define RAPID_PIN 10
 
 //Stepper Driver Configuration Values
-#define STEPSPERREV 400 // Half-stepping (200 full steps => 400 half steps per rev)
+#define STEPSPERREV 200 // Full-stepping (200 full steps per rev) 2x precision w/ 2:1 pulley
+//#define STEPSPERREV 400 // Half-stepping (200 full steps => 400 half steps per rev) 4x precision w/ 2:1 pulley
+//#define STEPSPERREV 800 // Quarter-stepping (200 full steps => 800 quarter steps per rev) 8x precision w/ 2:1 pulley
 #define REVSPERINCH 20 // 2:1 Pulley Reduction, 10 screw turns per inch
 
 // Imperial milling speeds defined in IPM, to be reduced to step pulses.

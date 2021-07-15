@@ -73,7 +73,7 @@ void beginRotaryEncoder() {
   attachInterrupt(digitalPinToInterrupt(rotaryPinB), PinB, RISING); // set an interrupt on PinB, looking for a rising edge signal and executing the "PinB" Interrupt Service Routine (above)
 }
 
-void logRotaryEncoder() {
+/* void logRotaryEncoder() {
   if (DEBUG) {
     if(oldEncPos != encoderPos) {
       Serial.print(encodedInchesPerMin, 2);
@@ -81,5 +81,5 @@ void logRotaryEncoder() {
       oldEncPos = encoderPos;
     }
   }
-}
+} */
 

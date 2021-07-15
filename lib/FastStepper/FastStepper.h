@@ -21,7 +21,7 @@ class FastStepper {
         unsigned long prevMillis = 0;
         long currentStepsPerSec = 0;
         long setStepsPerSec = 0;
-        long startingStepsPerSec = 5;
+        long startingStepsPerSec = 16;  // Divisible by microstepping?
 
         // State management
         bool stepperEnabled = false;
@@ -74,13 +74,26 @@ class FastStepper {
                 //Increment timers any time we accelerate
                 this->prevMillis = millis();
 
+                // Current speed is zero, or too slow to accel with torque so..
+                // jerk up to minimum speed then start accelerating.
+                if (this->currentStepsPerSec < this->startingStepsPerSec) {
+                    this->currentStepsPerSec = this->startingStepsPerSec; // Set minimum startup speed
+                    digitalWriteFast(this->controlPins[2], LOW); // Enable the driver once we have steps
+                }
+
                 // Accelerate until maxed
-                if (this->currentStepsPerSec > stepsPerSec) {
+                if (this->currentStepsPerSec < stepsPerSec) {
+                    this->currentStepsPerSec += accelRate;
+                }
+                else {
                     // we overshot slightly on the last loop, correct it
                     this->currentStepsPerSec = stepsPerSec;
                 }
-                else {
-                    this->currentStepsPerSec += accelRate;
+
+                if (DEBUG) {
+                    Serial.print("Accel: ");
+                    Serial.print(this->currentStepsPerSec);
+                    Serial.println(" Steps/sec");
                 }
                 
                 this->microsBetweenSteps();
@@ -100,6 +113,18 @@ class FastStepper {
                 else {
                     this->currentStepsPerSec -= accelRate;
                 }
+
+                // Once stopped, shut things down.
+                if (this->currentStepsPerSec <= 0) {
+                    this->currentStepsPerSec = 0; // Catch for overshooting stop.
+                    digitalWriteFast(this->controlPins[2], HIGH); // Disable the driver once we stop
+                }
+
+                if (DEBUG) {
+                    Serial.print("Decel: ");
+                    Serial.print(this->currentStepsPerSec);
+                    Serial.println(" Steps/sec");
+                }
                 
                 this->microsBetweenSteps();
             }
@@ -113,13 +138,12 @@ class FastStepper {
                 //Increment timers any time we step
                 this->prevMicros += this->microsPerStep;
 
-                if (this->setStepsPerSec > 0) {
+                if (this->currentStepsPerSec > 0) {
                     //Pulse the driver
                     digitalWriteFast(this->controlPins[0], HIGH);
                     delayMicroseconds(pulseWidthMicroseconds);
                     digitalWriteFast(this->controlPins[0], LOW);
                 }
-                
             }
         }
 
@@ -156,7 +180,9 @@ class FastStepper {
             if (DEBUG) {
                 Serial.print("Speed Initialized: ");
                 Serial.print(inchesPerMin);
-                Serial.println(" IPM");
+                Serial.print(" IPM | ");
+                Serial.print(this->setStepsPerSec);
+                Serial.println(" Steps/sec");
             } 
         }
 
@@ -179,13 +205,7 @@ class FastStepper {
 
         void run() {
             if (!this->stepperEnabled) {
-                this->stepperEnabled = true;
-                if (this->currentStepsPerSec < this->startingStepsPerSec) {
-                    this->currentStepsPerSec = this->startingStepsPerSec; // Set minimum startup speed
-                }
-                
-                digitalWriteFast(this->controlPins[2], LOW); // Enable the driver
-
+                this->stepperEnabled = true;  // State management only
                 if (DEBUG) {
                     Serial.println("RUN:");
                     Serial.print("Max Steps / Sec: "); Serial.println(this->maxStepsPerSec);
