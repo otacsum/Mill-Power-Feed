@@ -1,11 +1,18 @@
-// Set truthy to turn on Serial logging for debugging.  
-// Note the serial log blocking time will affect RPMs,
-// serial logging cannot be used to diagnose RPM inaccuracies, 
-// you must use an external tachometer.
-bool DEBUG = true;
+/********  DEBUGGING  ********
+ * Set truthy to turn on Serial logging for debugging.  
+ * Notes:
+ *  The serial log blocking time will affect RPMs &
+ *  rapid changes to speed using the rotary encoder will
+ *  cause the motor to halt and miss steps.
+ *  Also, serial logging cannot be used to diagnose RPM inaccuracies, 
+ *  you must use an external tachometer with DEBUG = false to
+ *  diagnose and tune RPMs.
+ */ 
+bool DEBUG = false;
 
 // Pins used for rotary encoder.  Depending on your board you 
-// might need to specifically use these two pins.  Change with caution.
+// might need to specifically use these two pins for interrupts.  Change with caution.
+// See: https://www.arduino.cc/reference/en/language/functions/external-interrupts/attachinterrupt/
 #define rotaryPinA 2 // Our first hardware interrupt pin is digital pin 2
 #define rotaryPinB 3 // Our second hardware interrupt pin is digital pin 3
 
@@ -28,7 +35,7 @@ bool DEBUG = true;
 // Imperial milling speeds defined in IPM, to be reduced to step pulses.
 // This is the maximum rate that can be programmed in using the rotary encoder and...
 // also the maximum speed that will be achieved when traversing in rapid mode.
-#define MAXINCHESPERMIN 35.00
+#define MAXINCHESPERMIN 36.00
 
 
 
