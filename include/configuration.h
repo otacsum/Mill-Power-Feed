@@ -2,7 +2,12 @@
 // Note the serial log blocking time will affect RPMs,
 // serial logging cannot be used to diagnose RPM inaccuracies, 
 // you must use an external tachometer.
-bool DEBUG = false;  
+bool DEBUG = true;
+
+// Pins used for rotary encoder.  Depending on your board you 
+// might need to specifically use these two pins.  Change with caution.
+#define rotaryPinA 2 // Our first hardware interrupt pin is digital pin 2
+#define rotaryPinB 3 // Our second hardware interrupt pin is digital pin 3
 
 // Pins used for stepper control signals
 #define PULSE_PIN 5
@@ -23,7 +28,7 @@ bool DEBUG = false;
 // Imperial milling speeds defined in IPM, to be reduced to step pulses.
 // This is the maximum rate that can be programmed in using the rotary encoder and...
 // also the maximum speed that will be achieved when traversing in rapid mode.
-#define MAXINCHESPERMIN 50
+#define MAXINCHESPERMIN 35.00
 
 
 
@@ -55,18 +60,23 @@ const long accelRate = 20; // Steps increased per accelInterval
 
 
 
-/**
+/*******************************************************************************
+ *******************************************************************************
+ *******************************************************************************
  * DO NOT MODIFY BELOW THIS LINE
- * DO NOT MODIFY BELOW THIS LINE
- * DO NOT MODIFY BELOW THIS LINE
- */
+ *******************************************************************************
+ *******************************************************************************
+ *******************************************************************************/
+ 
 
 
 
 
 
 
+// Velocity value set by the rotary encoder
+volatile float encodedInchesPerMin = 0.00;
 
-
+// Object initialization arrays
 int stepperControlPins[3] = {PULSE_PIN, DIRECTION_PIN, ENABLE_PIN};
 int threeWayPins[2] = {MOVELEFT_PIN, MOVERIGHT_PIN};

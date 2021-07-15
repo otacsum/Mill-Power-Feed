@@ -7,7 +7,6 @@
 #include "configuration.h"
 
 
-
 /**
 * Fast stepper class for driving the power feed.
 * ----------------------------------------------
@@ -123,10 +122,13 @@ class FastStepper {
                 //Increment timers any time we step
                 this->prevMicros += this->microsPerStep;
 
-                //Pulse the driver
-                digitalWriteFast(this->controlPins[0], HIGH);
-                delayMicroseconds(pulseWidthMicroseconds);
-                digitalWriteFast(this->controlPins[0], LOW);
+                if (this->setStepsPerSec > 0) {
+                    //Pulse the driver
+                    digitalWriteFast(this->controlPins[0], HIGH);
+                    delayMicroseconds(pulseWidthMicroseconds);
+                    digitalWriteFast(this->controlPins[0], LOW);
+                }
+                
             }
         }
 
@@ -484,21 +486,24 @@ FastStepper stepper(MAXINCHESPERMIN, REVSPERINCH, STEPSPERREV);
 ThreeWaySwitch directionSwitch(&stepper, DEBOUNCEMILLIS3WAY);
 MomentarySwitch rapidButton(&stepper, DEBOUNCEMILLISMOMENTARY);
 
-
-float encodedInchesPerMin = 20;
+// Interrupt-Based Rotary Encoder Functions
+#include <RotaryEncoder.h>
 
 void setup() {
-    if (DEBUG) { // Debugging
+    if (DEBUG) { // Log Events to Serial Monitor
         Serial.begin(9600);  
     }
 
     // Set defaults
     stepper.setSpeed(encodedInchesPerMin);
 
-    //Initialize the pin outputs/inputs
+    // Initialize the pin outputs/inputs
     stepper.begin(stepperControlPins);
     directionSwitch.begin(threeWayPins);
     rapidButton.begin(RAPID_PIN, encodedInchesPerMin);
+
+    // Set up Rotary Encoder Interrupts
+    beginRotaryEncoder();
 }
 
 
@@ -506,4 +511,5 @@ void loop() {
     directionSwitch.run();
     directionSwitch.read();
     rapidButton.read();
+    logRotaryEncoder();
 }
