@@ -8,7 +8,7 @@
  *  you must use an external tachometer with DEBUG = false to
  *  diagnose and tune RPMs.
  */ 
-bool DEBUG = false;
+bool DEBUG = true;
 
 // Pins used for rotary encoder.  Depending on your board you 
 // might need to specifically use these two pins for interrupts.  Change with caution.
@@ -29,8 +29,8 @@ bool DEBUG = false;
 #define RAPID_PIN 10
 
 //Stepper Driver Configuration Values
-#define STEPSPERREV 200 // Full-stepping (200 full steps per rev) 2x precision w/ 2:1 pulley
-//#define STEPSPERREV 400 // Half-stepping (200 full steps => 400 half steps per rev) 4x precision w/ 2:1 pulley
+//#define STEPSPERREV 200 // Full-stepping (200 full steps per rev) 2x precision w/ 2:1 pulley
+#define STEPSPERREV 400 // Half-stepping (200 full steps => 400 half steps per rev) 4x precision w/ 2:1 pulley
 //#define STEPSPERREV 800 // Quarter-stepping (200 full steps => 800 quarter steps per rev) 8x precision w/ 2:1 pulley
 #define REVSPERINCH 20 // 2:1 Pulley Reduction, 10 screw turns per inch
 
@@ -38,6 +38,7 @@ bool DEBUG = false;
 // This is the maximum rate that can be programmed in using the rotary encoder and...
 // also the maximum speed that will be achieved when traversing in rapid mode.
 #define MAXINCHESPERMIN 36.00
+#define SPEEDINCREMENT 0.25 // Inch/Min per step of the rotary encoder.
 
 
 
@@ -64,6 +65,11 @@ const long accelInterval = 5;  // Millis between increasing velocity
 const long accelRate = 20; // Steps increased per accelInterval
 
 
+// Rotary Encoder Increment Steps per Detent
+// May vary per encoder, check with a test script first or adjust if
+// Your increments are off by a multiple of N
+int encoderStepsPerDetent = 4;
+
 
 
 
@@ -89,3 +95,9 @@ volatile float encodedInchesPerMin = 0.00;
 // Object initialization arrays
 int stepperControlPins[3] = {PULSE_PIN, DIRECTION_PIN, ENABLE_PIN};
 int threeWayPins[2] = {MOVELEFT_PIN, MOVERIGHT_PIN};
+
+// Rotary encoder position at boot
+long oldEncoderPosition  = -999999;
+
+// Calculated max rotary encoder readings for Max Speed
+int maxEncoderPosition = (MAXINCHESPERMIN / SPEEDINCREMENT) * encoderStepsPerDetent;
