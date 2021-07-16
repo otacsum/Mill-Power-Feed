@@ -3,6 +3,8 @@
 //#include <LiquidCrystal.h>
 
 // Faster implementation of reading/writing pin states for fast stepper movement.
+// Library uses direct port manipulation, and is nearly as fast as the obscure
+// direct port manipulation syntax, but easier to read.
 #include <digitalWriteFast.h> 
 
 /* Rotary Encoder Library: http://www.pjrc.com/teensy/td_libs_Encoder.html */

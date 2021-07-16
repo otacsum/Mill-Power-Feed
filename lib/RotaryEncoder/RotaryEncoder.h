@@ -19,4 +19,3 @@ void readRotaryEncoder() {
     oldEncoderPosition = newEncoderPosition; // State management
   }  
 }
-
