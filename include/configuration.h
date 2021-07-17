@@ -28,6 +28,17 @@ bool DEBUG = true;
 // Pin used for rapids signal
 #define RAPID_PIN 10
 
+// LCD Pins
+#define rs_PIN 48
+#define lcdEnable_PIN 49
+#define d4_PIN 50
+#define d5_PIN 51
+#define d6_PIN 52
+#define d7_PIN 53
+
+#define LCD_PRINT_INTERVAL 50 // millis
+
+
 //Stepper Driver Configuration Values
 //#define STEPSPERREV 200 // Full-stepping (200 full steps per rev) 2x precision w/ 2:1 pulley
 #define STEPSPERREV 400 // Half-stepping (200 full steps => 400 half steps per rev) 4x precision w/ 2:1 pulley
@@ -46,8 +57,8 @@ bool DEBUG = true;
 /********* ADVANCED CONFIGURATION SETTINGS **********/
 
 // Non-blocking delay in millis for debouncing switch state change
-#define DEBOUNCEMILLISMOMENTARY 20
-#define DEBOUNCEMILLIS3WAY 20
+#define DEBOUNCEMILLISMOMENTARY 100
+#define DEBOUNCEMILLIS3WAY 100
 
 // Delay in millis for infrequent reading of switches to help motor run more efficiently.
 #define SWITCHREADDELAY 50

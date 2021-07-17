@@ -1,5 +1,3 @@
-Encoder rotaryEncoder(rotaryPinA, rotaryPinB);
-
 void readRotaryEncoder() {
   long newEncoderPosition = rotaryEncoder.read();
   // Set raw-reading lower and upper limits

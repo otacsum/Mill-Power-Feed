@@ -56,6 +56,18 @@ class ThreeWaySwitch {
             } 
             else {  // Switch is on at boot, disable switch until reset.
                 readyState = "Please Set Direction to Middle";
+                lcdMessage.bootError();
+                // Keep polling, do not continue initialization until the switch goes low
+                while (digitalReadFast(this->RIGHT_PIN) == HIGH
+                    ||
+                    digitalReadFast(this->LEFT_PIN) == HIGH) {
+                        delay(1);
+                    }
+                
+                // Enable safety flag if it was previously suppressed
+                if (!this->runEnabled) {
+                    this->runEnabled = true;
+                }
             }
 
             if (DEBUG) {
@@ -100,9 +112,11 @@ class ThreeWaySwitch {
                             
                             if (digitalReadFast(this->RIGHT_PIN) == HIGH) {
                                 this->feedMotor->setDirection(1); // Clockwise (relative)
+                                lcdMessage.printArrows(1);
                             }
                             else if (digitalReadFast(this->LEFT_PIN) == HIGH) {
                                 this->feedMotor->setDirection(0); // Counter-Clockwise (relative)
+                                lcdMessage.printArrows(0);
                             }
 
                             if (DEBUG) {
@@ -115,10 +129,8 @@ class ThreeWaySwitch {
                             } 
                         }
                         else { // Switch is off
-                            // Enable safety flag if it was previously suppressed
-                            if (!this->runEnabled) {
-                                this->runEnabled = true;
-                            }
+
+                            lcdMessage.printArrows(3); // "STOPPED"
                             
                             if (DEBUG) {
                                 Serial.println("Direction Switch: OFF");

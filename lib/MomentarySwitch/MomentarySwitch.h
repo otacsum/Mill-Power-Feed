@@ -15,9 +15,9 @@ class MomentarySwitch {
         unsigned long lastDebounceTime = 0;  // the last time the output pin was toggled
         unsigned long debounceDelay;    // millis, increase during init if still bouncy
 
-        // State management
-        int lastButtonState = LOW;
-        int currButtonState = LOW;
+        // State management (Pullup defaults high)
+        int lastButtonState = HIGH;
+        int currButtonState = HIGH;
 
         // Stepper Object References
         FastStepper* feedMotor;
@@ -35,7 +35,7 @@ class MomentarySwitch {
         void begin(int pin) {
             // Set pin default state
             this->INPUT_PIN = pin;
-            pinModeFast(this->INPUT_PIN, INPUT);
+            pinModeFast(this->INPUT_PIN, INPUT_PULLUP);
 
 
             if (DEBUG) {
@@ -65,7 +65,7 @@ class MomentarySwitch {
                     if (buttonReading != this->currButtonState) {
                         this->currButtonState = buttonReading; // Reset the state
 
-                        if (this->currButtonState == HIGH) {
+                        if (this->currButtonState == LOW) {
 
                             if (DEBUG) {
                                 Serial.print("RAPID: ");
