@@ -21,7 +21,7 @@ class FastStepper {
         unsigned long prevMillis = 0;
         long currentStepsPerSec = 0;
         long setStepsPerSec = 0;
-        long startingStepsPerSec = 50;  // Divisible by microstepping?
+        long startingStepsPerSec = 40;  // Divisible by microstepping?
 
         // State management
         bool stepperEnabled = false;
@@ -73,7 +73,7 @@ class FastStepper {
             }
         }
 
-        bool accelerate() {
+        void accelerate() {
             if (millis() - this->prevMillis >= accelInterval) { 
                 //Increment timers any time we accelerate
                 this->prevMillis = millis();
@@ -88,7 +88,8 @@ class FastStepper {
                 else if (this->currentStepsPerSec < this->setStepsPerSec) {
                     this->currentStepsPerSec += accelRate;
                 }
-                else {
+                
+                if (this->currentStepsPerSec > this->setStepsPerSec) {
                     // we overshot slightly on the last loop, correct it
                     this->currentStepsPerSec = this->setStepsPerSec;
                 }
@@ -103,18 +104,17 @@ class FastStepper {
                 
                 this->microsBetweenSteps(); // Calc and store the delay between pulses
             }
-            return true;
         }
 
-        bool decelerate() {
+        void decelerateTo(long stepsPerSec) {
             if (millis() - this->prevMillis >= accelInterval) { 
                 //Increment timers any time we accelerate
                 this->prevMillis = millis();
 
                 // Decelerate until set speed or 0
-                if (this->currentStepsPerSec < this->setStepsPerSec) {
+                if (this->currentStepsPerSec < stepsPerSec) {
                     // we overshot slightly on the last loop, correct it
-                    this->currentStepsPerSec = this->setStepsPerSec;
+                    this->currentStepsPerSec = stepsPerSec;
                 }
                 else {
                     this->currentStepsPerSec -= accelRate;
@@ -134,7 +134,6 @@ class FastStepper {
                 
                 this->microsBetweenSteps(); // Calc and store the delay between pulses
             }
-            return true;
         }
 
         void step() {
@@ -211,14 +210,14 @@ class FastStepper {
                 digitalWriteFast(this->controlPins[1], LOW);
                 
                 if (DEBUG) {
-                    Serial.println("Direction: Left");
+                    Serial.println("Direction: Right");
                 }   
             }
             else {  
                 digitalWriteFast(this->controlPins[1], HIGH);
 
                 if (DEBUG) {
-                    Serial.println("Direction: Right");
+                    Serial.println("Direction: Left");
                 }  
             }
         }
@@ -238,20 +237,20 @@ class FastStepper {
                 }                
             }
 
-            bool done = false;
-
+            // Stopped but set for a speed OR running but not at full speed
             // Accelerate to, and maintain speed
-            if (0 < this->currentStepsPerSec && this->currentStepsPerSec <= this->setStepsPerSec) {
-                done = this->accelerate();    
+            if (this->setStepsPerSec > 0 && this->currentStepsPerSec <= this->setStepsPerSec) {
+                this->accelerate();    
             }
             // If a new slower speed was entered, decelerate to it
-            else if (0 < this->currentStepsPerSec && this->currentStepsPerSec > this->setStepsPerSec) {
-                done = this->decelerate();
+            else if (this->currentStepsPerSec > 0 && this->currentStepsPerSec > this->setStepsPerSec) {
+                this->decelerateTo(this->setStepsPerSec);
             }
-               this->step(); 
-            if (done) {
-                //this->step();
-            }         
+
+            if (!DEBUG) {
+                this->step(); // Stepping is pointless when debugging, too many blocking signals.
+            }
+                
         }
 
         void stop() {
@@ -263,10 +262,8 @@ class FastStepper {
             
             // If it's still moving, decelerate to 0
             if (this->currentStepsPerSec > 0) {
-                int done = 0;
-                this->setStepsPerSec = 0;
-                done = this->decelerate();
-                if (done) this->step();
+                this->decelerateTo(0);
+                this->step();
             }
             else if (this->doOnceWhenStopped && this->currentStepsPerSec <= 0) { // Stopped, do these things once.
                 this->doOnceWhenStopped = false;  // Reset flag, used to reduce redundant processing.

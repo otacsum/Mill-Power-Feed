@@ -6,11 +6,9 @@ class LCDMessage {
 
         bool isDisplayingSpeed = false;
 
-        void writeLCD() {
-            // Change state
-            this->isDisplayingSpeed = false;
+        int directionState = 3;
 
-            lcd.clear();
+        void writeLCD() {
             lcd.setCursor(0,0); // First Row
             lcd.print(this->line1String);
             lcd.setCursor(0,1); // Second Row
@@ -38,37 +36,40 @@ class LCDMessage {
             this->writeLCD();
         }
 
+        void rapidMessage() {
+            this->isDisplayingSpeed = false;
+            this->line1String = "---- RAPID ---- "; 
+            this->writeLCD();
+        }
+
         void writeSpeed(float speed) {
             String speedStr = String(speed, 2) + " ";
-            if (!this->isDisplayingSpeed) {
-                lcd.clear();
-                // Change state
-                this->isDisplayingSpeed = true;
 
-                this->line1String = this->speedPrefix + speedStr; 
-                lcd.print(this->line1String);
+            this->line1String = this->speedPrefix + speedStr;
+            
+            if (this->isDisplayingSpeed) {  // Only print the first line
+                lcd.setCursor(0,0); // First Row
+                lcd.print(this->line1String); 
             }
-            else {
-                lcd.setCursor(10,0); // Replace just the chars changed
-                lcd.print(speedStr);
-            }          
+            else {  // Create the arrows and print the whole thing.
+                this->isDisplayingSpeed = true;
+                this->printArrows(this->directionState); 
+            }              
         }
 
         void printArrows(int direction) {
-
-            lcd.setCursor(0,1); // Replace just the second row
+            this->directionState = direction;
             switch (direction) {
                 case 0:
-                    lcd.print("      >>>>      ");
+                    this->line2String = "         >>>>   ";
                     break;
                 case 1:
-                    lcd.print("      <<<<      ");
+                    this->line2String = "   <<<<         ";
                     break;
                 default:
-                    lcd.print("    STOPPED     ");
+                    this->line2String = "  \xff STOPPED \xff   ";
             }
-                
-
+            this->writeLCD();
         }
         
 };

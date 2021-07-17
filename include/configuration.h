@@ -8,7 +8,7 @@
  *  you must use an external tachometer with DEBUG = false to
  *  diagnose and tune RPMs.
  */ 
-bool DEBUG = true;
+bool DEBUG = false;
 
 // Pins used for rotary encoder.  Depending on your board you 
 // might need to specifically use these two pins for interrupts.  Change with caution.
@@ -72,7 +72,7 @@ int pulseWidthMicroseconds = 50;
 unsigned long calibrationMicros = 8;
 
 // Acceleration Params (linear acceleration)
-const long accelInterval = 5;  // Millis between increasing velocity
+const long accelInterval = 10;  // Millis between increasing velocity
 const long accelRate = 20; // Steps increased per accelInterval
 
 
