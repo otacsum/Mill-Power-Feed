@@ -15,6 +15,7 @@ bool DEBUG = false;
 // See: https://www.arduino.cc/reference/en/language/functions/external-interrupts/attachinterrupt/
 #define rotaryPinA 2 // Our first hardware interrupt pin is digital pin 2
 #define rotaryPinB 3 // Our second hardware interrupt pin is digital pin 3
+#define rotaryMomentaryPin 4 // When pressing in on the rotary knob
 
 // Pins used for stepper control signals
 #define PULSE_PIN 5
@@ -36,8 +37,6 @@ bool DEBUG = false;
 #define d6_PIN 52
 #define d7_PIN 53
 
-#define LCD_PRINT_INTERVAL 50 // millis
-
 
 //Stepper Driver Configuration Values
 //#define STEPSPERREV 200 // Full-stepping (200 full steps per rev) 2x precision w/ 2:1 pulley
@@ -57,19 +56,19 @@ bool DEBUG = false;
 /********* ADVANCED CONFIGURATION SETTINGS **********/
 
 // Non-blocking delay in millis for debouncing switch state change
-#define DEBOUNCEMILLISMOMENTARY 100
-#define DEBOUNCEMILLIS3WAY 100
+const unsigned long DEBOUNCEMILLISMOMENTARY = 25;
+const unsigned long DEBOUNCEMILLIS3WAY = 25;
 
 // Delay in millis for infrequent reading of switches to help motor run more efficiently.
-#define SWITCHREADDELAY 50
+const unsigned long SWITCHREADDELAY = 50;
 
 // Motor pulse width, make this as long as possible without impacting your RPMs
-// Sending the driver's minimum requirement will reduce torque.
-int pulseWidthMicroseconds = 50; 
+// Sending the driver's minimum requirement will reduce torque, even though it's not supposed to.
+const unsigned int pulseWidthMicroseconds = 50; 
 
 // Pulse width delay is a blocking function, so this helps counter it for more accurate speeds.
 // Higher numbers = higher speeds
-unsigned long calibrationMicros = 8;
+//const unsigned long calibrationMicros = 8;
 
 // Acceleration Params (linear acceleration)
 const long accelInterval = 10;  // Millis between increasing velocity
@@ -99,6 +98,8 @@ int encoderStepsPerDetent = 4;
 
 
 
+int PRESSED = LOW;
+int UNPRESSED = HIGH;
 
 // Velocity value set by the rotary encoder
 volatile float encodedInchesPerMin = 0.00;
@@ -111,4 +112,4 @@ int threeWayPins[2] = {MOVELEFT_PIN, MOVERIGHT_PIN};
 long oldEncoderPosition  = -999999;
 
 // Calculated max rotary encoder readings for Max Speed
-int maxEncoderPosition = (MAXINCHESPERMIN / SPEEDINCREMENT) * encoderStepsPerDetent;
+long maxEncoderPosition = (MAXINCHESPERMIN / SPEEDINCREMENT) * encoderStepsPerDetent;

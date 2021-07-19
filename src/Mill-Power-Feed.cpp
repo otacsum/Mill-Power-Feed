@@ -28,7 +28,8 @@ ThreeWaySwitch directionSwitch(&stepper, DEBOUNCEMILLIS3WAY);
 
 // Controller for a momentary SPST N/O switch for rapid function
 #include <MomentarySwitch.h>
-MomentarySwitch rapidButton(&stepper, DEBOUNCEMILLISMOMENTARY);
+MomentarySwitch rapidButton(&stepper, DEBOUNCEMILLISMOMENTARY, 0);
+MomentarySwitch encoderButton(&stepper, DEBOUNCEMILLISMOMENTARY, 1);
 
 
 Encoder rotaryEncoder(rotaryPinA, rotaryPinB);
@@ -47,6 +48,7 @@ void setup() {
     stepper.begin(stepperControlPins);
     directionSwitch.begin(threeWayPins);
     rapidButton.begin(RAPID_PIN);
+    encoderButton.begin(rotaryMomentaryPin);
 }
 
 
@@ -54,6 +56,7 @@ void loop() {
     directionSwitch.run();
     directionSwitch.read();
     rapidButton.read();
+    encoderButton.read();
 
     readRotaryEncoder(); // Abstraction to simplify encoder readings and translation to speed/events.
 }

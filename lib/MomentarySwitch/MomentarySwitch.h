@@ -16,8 +16,13 @@ class MomentarySwitch {
         unsigned long debounceDelay;    // millis, increase during init if still bouncy
 
         // State management (Pullup defaults high)
-        int lastButtonState = LOW;
-        int currButtonState = LOW;
+        int lastButtonState = UNPRESSED;
+        int currButtonState = UNPRESSED;
+        bool paused = false;
+
+
+        // Modes [0 = Rapid Movement, 1 = Pause Function, 2 = Change Units]
+        int buttonMode;
 
         // Stepper Object References
         FastStepper* feedMotor;
@@ -25,17 +30,59 @@ class MomentarySwitch {
         // Hardware config
         int INPUT_PIN;
 
+        void rapidFeed() {
+            if (this->currButtonState == PRESSED) {
+                if (DEBUG) {
+                    Serial.print("RAPID: ");
+                } 
+
+                this->feedMotor->setSpeed(MAXINCHESPERMIN);
+                lcdMessage.rapidMessage();
+            }
+            else {
+                if (DEBUG) {
+                    Serial.print("SLOW: ");
+                }
+
+                this->feedMotor->setSpeed(encodedInchesPerMin);
+            }
+        }
+
+        void pauseFeed() { // This seems backward, but it's correct for a press-then-release switch
+            if (this->currButtonState == UNPRESSED) {
+                if (!this->paused) {
+                    if (DEBUG) {
+                        Serial.print("PAUSE: ");
+                    } 
+
+                    this->feedMotor->setSpeed(0);
+                    lcdMessage.pausedMessage();
+                    
+                }
+                else {
+                    if (DEBUG) {
+                        Serial.print("RUN: ");
+                    }
+
+                    this->feedMotor->setSpeed(encodedInchesPerMin);
+                }
+                this->paused = !this->paused; // Invert the state
+            }
+        }
+
     public:
         // Constructor
-        MomentarySwitch(FastStepper* motor, int delay) {
+        // Modes [0 = Rapid Movement, 1 = Pause Function, 2 = Change Units]
+        MomentarySwitch(FastStepper* motor, int delay, int mode) {
             this->feedMotor = motor;
             this->debounceDelay = delay;
+            this->buttonMode = mode;
         };
 
         void begin(int pin) {
             // Set pin default state
             this->INPUT_PIN = pin;
-            pinModeFast(this->INPUT_PIN, INPUT);
+            pinModeFast(this->INPUT_PIN, INPUT_PULLUP);
 
 
             if (DEBUG) {
@@ -65,20 +112,20 @@ class MomentarySwitch {
                     if (buttonReading != this->currButtonState) {
                         this->currButtonState = buttonReading; // Reset the state
 
-                        if (this->currButtonState == HIGH) {
+                        switch(this->buttonMode) {
+                        case 0:
+                            this->rapidFeed();
+                            break;
+                        
+                        case 1:
+                            this->pauseFeed();
+                            break;
+                        
+                        default:
+                            break;
+                        }
 
-                            if (DEBUG) {
-                                Serial.print("RAPID: ");
-                            } 
-                            this->feedMotor->setSpeed(MAXINCHESPERMIN);
-                            lcdMessage.rapidMessage();
-                        }
-                        else {
-                            if (DEBUG) {
-                                Serial.print("SLOW: ");
-                            }
-                            this->feedMotor->setSpeed(encodedInchesPerMin);
-                        }
+                        
                     }
                 }
                 // Save the state

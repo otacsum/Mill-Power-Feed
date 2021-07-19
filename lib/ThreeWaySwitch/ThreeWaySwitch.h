@@ -15,8 +15,8 @@ class ThreeWaySwitch {
         unsigned long debounceDelay;    // millis, increase during init if still bouncy
 
         // State management
-        int lastSwitchState = LOW;
-        int currSwitchState = LOW;
+        int lastSwitchState = UNPRESSED;
+        int currSwitchState = UNPRESSED;
 
         // Safety Flag - Cannot start if switch is on at boot
         bool runEnabled = false;
@@ -40,17 +40,17 @@ class ThreeWaySwitch {
 
             // Set pins' default states
             this->LEFT_PIN = pins[0];
-            pinModeFast(this->LEFT_PIN, INPUT);
+            pinModeFast(this->LEFT_PIN, INPUT_PULLUP);
 
             this->RIGHT_PIN = pins[1];
-            pinModeFast(this->RIGHT_PIN, INPUT);
+            pinModeFast(this->RIGHT_PIN, INPUT_PULLUP);
 
             // Safety Interlock - Do not start at boot
             // User must switch to middle (disabled) direction 
             // position before motor will run.
-            if (digitalReadFast(this->RIGHT_PIN) != HIGH
+            if (digitalReadFast(this->RIGHT_PIN) != PRESSED
                     &&
-                    digitalReadFast(this->LEFT_PIN) != HIGH) {
+                    digitalReadFast(this->LEFT_PIN) != PRESSED) {
                 readyState = "Ready";
                 this->runEnabled = true;
             } 
@@ -58,9 +58,9 @@ class ThreeWaySwitch {
                 readyState = "Please Set Direction to Middle";
                 lcdMessage.bootError();
                 // Keep polling, do not continue initialization until the switch goes low
-                while (digitalReadFast(this->RIGHT_PIN) == HIGH
+                while (digitalReadFast(this->RIGHT_PIN) == PRESSED
                     ||
-                    digitalReadFast(this->LEFT_PIN) == HIGH) {
+                    digitalReadFast(this->LEFT_PIN) == PRESSED) {
                         delay(1);
                     }
                 
@@ -84,14 +84,13 @@ class ThreeWaySwitch {
                 // on either pin
                 int switchReading;
                 
-                // Using elseif here due to delays caused by sequential reads
-                if (digitalReadFast(this->RIGHT_PIN) == HIGH
+                if (digitalReadFast(this->RIGHT_PIN) == PRESSED
                         || 
-                        digitalReadFast(this->LEFT_PIN) == HIGH) {
-                    switchReading = HIGH;
+                        digitalReadFast(this->LEFT_PIN) == PRESSED) {
+                    switchReading = PRESSED;
                 }
                 else {
-                    switchReading = LOW;
+                    switchReading = UNPRESSED;
                 }
 
                 // Switch state changed, is it bouncing?
@@ -107,14 +106,13 @@ class ThreeWaySwitch {
                     if (switchReading != this->currSwitchState) {
                         this->currSwitchState = switchReading; // Reset the state
 
-                        if (this->currSwitchState == HIGH) { // Switch is on
-                            // TODO: Add LCD Status Symbols
+                        if (this->currSwitchState == PRESSED) { // Switch is on
                             
-                            if (digitalReadFast(this->RIGHT_PIN) == HIGH) {
+                            if (digitalReadFast(this->RIGHT_PIN) == PRESSED) {
                                 this->feedMotor->setDirection(1); // Clockwise (relative)
                                 lcdMessage.printArrows(1);
                             }
-                            else if (digitalReadFast(this->LEFT_PIN) == HIGH) {
+                            else if (digitalReadFast(this->LEFT_PIN) == PRESSED) {
                                 this->feedMotor->setDirection(0); // Counter-Clockwise (relative)
                                 lcdMessage.printArrows(0);
                             }
@@ -143,7 +141,15 @@ class ThreeWaySwitch {
         }
 
         void run() {
-            if (this->runEnabled && this->currSwitchState == HIGH) { // Safety Flag is safe and switch is on, not bouncing.
+            /* if (DEBUG) {
+                Serial.print("In/Min: "); Serial.print(this->feedMotor->currentInchesPerMin);
+                Serial.print(" | MSS: "); Serial.print(this->feedMotor->maxStepsPerSec);
+                Serial.print(" | SSS: "); Serial.print(this->feedMotor->setStepsPerSec);
+                Serial.print(" | CSS: "); Serial.print(this->feedMotor->currentStepsPerSec);
+                Serial.print(" | MicS: "); Serial.println(this->feedMotor->microsPerStep);
+            } */
+
+            if (this->runEnabled && this->currSwitchState == PRESSED) { // Safety Flag is safe and switch is on, not bouncing.
                 this->feedMotor->run();
             }
             else {
