@@ -68,9 +68,10 @@ const unsigned int pulseWidthMicroseconds = 50;
 
 // Pulse width delay is a blocking function, so this helps counter it for more accurate speeds.
 // Higher numbers = higher speeds
-//const unsigned long calibrationMicros = 8;
+//const unsigned long calibrationMicros = 8;  //No longer needed?
 
 // Acceleration Params (linear acceleration)
+#define MININCHESPERMINUTE 0.1
 const long accelInterval = 10;  // Millis between increasing velocity
 const long accelRate = 20; // Steps increased per accelInterval
 
@@ -100,6 +101,19 @@ int encoderStepsPerDetent = 4;
 
 int PRESSED = LOW;
 int UNPRESSED = HIGH;
+
+// Time standards
+const long secondsPerMin = 60;
+const unsigned long microsPerSec = 1000000;
+
+// Minimum delay between motor pulses, sanity check for runaway math.
+// == 1M / max steps per sec.
+const unsigned long maxStepsPerSec = (MAXINCHESPERMIN * REVSPERINCH * STEPSPERREV) / secondsPerMin;
+const unsigned long minMicrosPerStep = microsPerSec / maxStepsPerSec;
+
+// Max delay between motor pulses, basically accel jerk limit from zero.
+const unsigned long startStepsPerSec = (MININCHESPERMINUTE * REVSPERINCH * STEPSPERREV) / secondsPerMin;
+const unsigned long startMicrosPerStep = microsPerSec / startStepsPerSec;
 
 // Velocity value set by the rotary encoder
 volatile float encodedInchesPerMin = 0.00;

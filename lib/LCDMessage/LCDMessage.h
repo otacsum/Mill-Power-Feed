@@ -4,9 +4,12 @@ class LCDMessage {
         String line2String;
         String speedPrefix = "Inch/min: ";
 
+        // Used to rewrite line1String next time
         bool isDisplayingSpeed = false;
-
+        
+        // State management
         int directionState = 3;
+        float lastSpeedState = 0.00;
 
         void writeLCD() {
             lcd.setCursor(0,0); // First Row
@@ -46,7 +49,15 @@ class LCDMessage {
 
         void pausedMessage() {
             this->isDisplayingSpeed = false;
-            this->line1String = "---- PAUSED ----"; 
+            this->line1String = this->speedPrefix + String(encodedInchesPerMin, 2);
+            switch (this->directionState) {
+                case 0:
+                    this->line2String = "---- PAUSED >>>>";
+                    break;
+                case 1:
+                    this->line2String = "<<<< PAUSED ----";
+                    break;
+            }
             this->writeLCD();
         }
 

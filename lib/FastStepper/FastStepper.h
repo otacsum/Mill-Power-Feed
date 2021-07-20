@@ -14,23 +14,18 @@ class FastStepper {
     private: 
         // Timing and pulse variables
         unsigned long prevMicros = 0;
-        unsigned long microsPerStep = 60606; //0.125 in/min @ 400 steps/rev
-        long maxStepsPerSec = 0;
+        unsigned long microsPerStep = 60606;
 
         // Acceleration parameters
         unsigned long prevMillis = 0;
         long currentStepsPerSec = 0;
         long setStepsPerSec = 0;
-        const long startingStepsPerSec = 16;  // Divisible by microstepping?
 
         // State management
-        bool stepperEnabled = false;
         bool doOnceWhenStopped = false;
         int maxInchesPerMin = 0;
 
-        // Time standards
-        const long secondsPerMin = 60;
-        const unsigned long microsPerSec = 1000000;
+        
 
         // Hardware states from config
         int revolutionsPerInch;
@@ -44,22 +39,20 @@ class FastStepper {
 
     public:
 
-        // Velocity & Accel States
+        // State management accessed by other classes
         float currentInchesPerMin = 0.0;
+        bool stepperEnabled = false;
+        bool paused = false;
 
 
     private:
-
-        long getMaxStepsPerSec(float maxIPM) {
-            return this->calcStepsPerSec(maxIPM);
-        }
 
         long calcStepsPerSec(float inchesPerMin) {
             // Using minutes because the truncated remainders of 
             // larger numbers are less significant.
             unsigned long RPM = inchesPerMin * this->revolutionsPerInch;
             unsigned long stepsPerMin = RPM * this->stepsPerRevolution;
-            unsigned long stepsPerSec = stepsPerMin / this->secondsPerMin;
+            unsigned long stepsPerSec = stepsPerMin / secondsPerMin;
 
             return stepsPerSec;
         }
@@ -67,12 +60,15 @@ class FastStepper {
         void microsBetweenSteps() {
             if (this->currentStepsPerSec > 0) {
                 noInterrupts();
-                this->microsPerStep = this->microsPerSec / this->currentStepsPerSec;
+                this->microsPerStep = microsPerSec / this->currentStepsPerSec;
+                if (this->microsPerStep < minMicrosPerStep) { // If it's trying to run faster than max.
+                    this->microsPerStep = microsPerStep; // Error catching for runaway math.
+                }
                 interrupts();
             }
-            else {
+            else {  // Somehow steps/sec got negative, error correct to slowest speed.
                 noInterrupts();
-                this->microsPerStep = 60606;  // Error catching, rarely if ever executes
+                this->microsPerStep = startMicrosPerStep;  // Error catching, rarely if ever executes
                 interrupts();
             }
         }
@@ -83,14 +79,14 @@ class FastStepper {
             long timeSinceLastAccel = currLoopMillis - this->prevMillis;
             if (timeSinceLastAccel >= accelInterval) { 
                 //Increment timers any time we accelerate
-                this->prevMillis = currLoopMillis;
+                //this->prevMillis = currLoopMillis;
+                this->prevMillis += accelInterval;
                 
                 // Current speed is zero, or too slow to accel with torque so..
                 // jerk up to minimum speed then start accelerating.
-                if (this->currentStepsPerSec < this->startingStepsPerSec) {
-                    this->currentStepsPerSec = this->startingStepsPerSec; // Set minimum startup speed
-                    this->microsBetweenSteps(); // Calc and store the delay before enabling the driver
-                    digitalWriteFast(this->controlPins[2], LOW); // Enable the driver once we have steps
+                if (this->microsPerStep < startMicrosPerStep) {
+                    this->microsPerStep = startMicrosPerStep; // Set minimum startup speed
+                    digitalWriteFast(this->controlPins[2], LOW); // Enable the driver once we have step delay
                 }
                 // Accelerate until maxed
                 else if (this->currentStepsPerSec < stepsPerSec) {
@@ -124,20 +120,20 @@ class FastStepper {
                     this->currentStepsPerSec = stepsPerSec;
                 }
                 else {
-                    if (fast) {
+                    /* if (fast) {
                         this->currentStepsPerSec -= (accelRate * 2);
-                    }
-                    else {
-                        this->currentStepsPerSec -= accelRate;
-                    }
+                    } 
+                    else {*/
+                        this->currentStepsPerSec -= accelRate * 2;
+                    //}
                     
                 }
 
                 // Once stopped, shut things down.
                 if (this->currentStepsPerSec <= 0) {
                     this->currentStepsPerSec = 0; // Catch for overshooting stop.
-                    this->microsPerStep = 30303;  // Reset to min speed delay.
-                    digitalWriteFast(this->controlPins[2], HIGH); // Disable the driver once we stop
+                    this->microsPerStep = minMicrosPerStep;  // Reset to min speed delay.
+                    //TODO: Redundant digitalWriteFast(this->controlPins[2], HIGH); // Disable the driver once we stop
                 }
                 else {
                     this->microsBetweenSteps(); // Calc and store the delay between pulses
@@ -158,8 +154,7 @@ class FastStepper {
             long timeSinceLastPulse = micros() - this->prevMicros;
             noInterrupts();
             // If the elapsed time since last step is enough, or the timer rolled over, step again
-            if (timeSinceLastPulse >= this->microsPerStep) { //} || timeSinceLastPulse < 0) { 
-
+            if (timeSinceLastPulse >= signed(this->microsPerStep) || timeSinceLastPulse <= 0) { 
                 //Increment timers any time we step
                 if (timeSinceLastPulse < 0) {
                     this->prevMicros = micros(); // Rollover handling, restart the timer.
@@ -169,7 +164,7 @@ class FastStepper {
                 }
 
                 
-                if (this->currentStepsPerSec > 0 && this->microsPerStep > 0) {
+                if (this->currentStepsPerSec > 0 && this->microsPerStep > minMicrosPerStep) {
                     //Pulse the driver
                     digitalWriteFast(this->controlPins[0], HIGH);
                     delayMicroseconds(pulseWidthMicroseconds);
@@ -188,7 +183,6 @@ class FastStepper {
             this->maxInchesPerMin = maxIPM;
             this->revolutionsPerInch = revsPerInch;
             this->stepsPerRevolution = stepsPerRev;
-            this->maxStepsPerSec = this->getMaxStepsPerSec(maxIPM);
         }
 
         void begin(int pins[]) {
@@ -221,6 +215,9 @@ class FastStepper {
         }
 
         void setSpeed(float inchesPerMin) {
+            if (this->paused) {  // Reset paused state when speed changes
+                this->paused = !this->paused;
+            }
             this->setStepsPerSec = this->calcStepsPerSec(inchesPerMin);
             lcdMessage.writeSpeed(inchesPerMin);
             if (DEBUG) {
@@ -257,7 +254,7 @@ class FastStepper {
 
                 if (DEBUG) {
                     Serial.println("RUN:");
-                    Serial.print("Max Steps / Sec: "); Serial.println(this->maxStepsPerSec);
+                    Serial.print("Max Steps / Sec: "); Serial.println(maxStepsPerSec);
                     Serial.print("Set Steps / Sec: "); Serial.println(this->setStepsPerSec);
                     Serial.print("Enabled: "); Serial.println(this->stepperEnabled);
                     Serial.println();
@@ -298,10 +295,15 @@ class FastStepper {
                 this->doOnceWhenStopped = false;  // Reset flag, used to reduce redundant processing.
                 digitalWriteFast(this->controlPins[2], HIGH); // Disable the driver
                 digitalWriteFast(this->controlPins[0], LOW); // Make sure the pulse pin is off
+                
+                if (this->paused) {  // Reset paused state
+                    this->paused = !this->paused;
+                    lcdMessage.writeSpeed(encodedInchesPerMin);
+                }
 
                 if (DEBUG) {
                     Serial.println("STOP:");
-                    Serial.print("Max Steps / Sec: "); Serial.println(this->maxStepsPerSec);
+                    Serial.print("Max Steps / Sec: "); Serial.println(maxStepsPerSec);
                     Serial.print("Set Steps / Sec: "); Serial.println(this->setStepsPerSec);
                     Serial.print("Enabled: "); Serial.println(this->stepperEnabled);
                     Serial.println();

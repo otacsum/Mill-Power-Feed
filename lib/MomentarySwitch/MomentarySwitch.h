@@ -18,7 +18,7 @@ class MomentarySwitch {
         // State management (Pullup defaults high)
         int lastButtonState = UNPRESSED;
         int currButtonState = UNPRESSED;
-        bool paused = false;
+        bool previouslyPaused = false;
 
 
         // Modes [0 = Rapid Movement, 1 = Pause Function, 2 = Change Units]
@@ -32,6 +32,7 @@ class MomentarySwitch {
 
         void rapidFeed() {
             if (this->currButtonState == PRESSED) {
+                this->previouslyPaused = this->feedMotor->paused;
                 if (DEBUG) {
                     Serial.print("RAPID: ");
                 } 
@@ -43,14 +44,21 @@ class MomentarySwitch {
                 if (DEBUG) {
                     Serial.print("SLOW: ");
                 }
-
-                this->feedMotor->setSpeed(encodedInchesPerMin);
+                if (this->previouslyPaused) { // Was paused, go to zero, set state, print message.
+                    this->feedMotor->setSpeed(0);
+                    this->feedMotor->paused = !this->feedMotor->paused;
+                    lcdMessage.pausedMessage();
+                }
+                else {
+                    //Not previously paused, set speed.
+                    this->feedMotor->setSpeed(encodedInchesPerMin);
+                }
             }
         }
 
         void pauseFeed() { // This seems backward, but it's correct for a press-then-release switch
             if (this->currButtonState == UNPRESSED) {
-                if (!this->paused) {
+                if (!this->feedMotor->paused) {
                     if (DEBUG) {
                         Serial.print("PAUSE: ");
                     } 
@@ -58,15 +66,15 @@ class MomentarySwitch {
                     this->feedMotor->setSpeed(0);
                     lcdMessage.pausedMessage();
                     
+                    this->feedMotor->paused = !this->feedMotor->paused; // Set pause state
                 }
                 else {
                     if (DEBUG) {
                         Serial.print("RUN: ");
                     }
 
-                    this->feedMotor->setSpeed(encodedInchesPerMin);
-                }
-                this->paused = !this->paused; // Invert the state
+                    this->feedMotor->setSpeed(encodedInchesPerMin);  // Sets unpaused
+                    }
             }
         }
 
