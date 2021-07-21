@@ -39,16 +39,16 @@ bool DEBUG = false;
 
 
 //Stepper Driver Configuration Values
-//#define STEPSPERREV 200 // Full-stepping (200 full steps per rev) 2x precision w/ 2:1 pulley
-#define STEPSPERREV 400 // Half-stepping (200 full steps => 400 half steps per rev) 4x precision w/ 2:1 pulley
-//#define STEPSPERREV 800 // Quarter-stepping (200 full steps => 800 quarter steps per rev) 8x precision w/ 2:1 pulley
-#define REVSPERINCH 20 // 2:1 Pulley Reduction, 10 screw turns per inch
+//const unsigned long STEPSPERREV = 200; // Full-stepping (200 full steps per rev) 2x precision w/ 2:1 pulley
+const unsigned long STEPSPERREV = 400; // Half-stepping (200 full steps => 400 half steps per rev) 4x precision w/ 2:1 pulley
+//const unsigned long STEPSPERREV = 800; // Quarter-stepping (200 full steps => 800 quarter steps per rev) 8x precision w/ 2:1 pulley
+const unsigned long REVSPERINCH = 20; // 2:1 Pulley Reduction, 10 screw turns per inch
 
 // Imperial milling speeds defined in IPM, to be reduced to step pulses.
 // This is the maximum rate that can be programmed in using the rotary encoder and...
 // also the maximum speed that will be achieved when traversing in rapid mode.
-#define MAXINCHESPERMIN 36.00
-#define SPEEDINCREMENT 0.25 // Inch/Min per step of the rotary encoder.
+const float MAXINCHESPERMIN = 36.00;
+const float SPEEDINCREMENT  = 0.25; // Inch/Min per step of the rotary encoder.
 
 
 
@@ -57,7 +57,7 @@ bool DEBUG = false;
 
 // Non-blocking delay in millis for debouncing switch state change
 const unsigned long DEBOUNCEMILLISMOMENTARY = 25;
-const unsigned long DEBOUNCEMILLIS3WAY = 25;
+const unsigned long DEBOUNCEMILLIS3WAY = 50;
 
 // Delay in millis for infrequent reading of switches to help motor run more efficiently.
 const unsigned long SWITCHREADDELAY = 50;
@@ -66,12 +66,8 @@ const unsigned long SWITCHREADDELAY = 50;
 // Sending the driver's minimum requirement will reduce torque, even though it's not supposed to.
 const unsigned int pulseWidthMicroseconds = 50; 
 
-// Pulse width delay is a blocking function, so this helps counter it for more accurate speeds.
-// Higher numbers = higher speeds
-//const unsigned long calibrationMicros = 8;  //No longer needed?
-
 // Acceleration Params (linear acceleration)
-#define MININCHESPERMINUTE 0.1
+const float MININCHESPERMINUTE = 0.1;
 const long accelInterval = 10;  // Millis between increasing velocity
 const long accelRate = 20; // Steps increased per accelInterval
 
@@ -79,7 +75,7 @@ const long accelRate = 20; // Steps increased per accelInterval
 // Rotary Encoder Increment Steps per Detent
 // May vary per encoder, check with a test script first or adjust if
 // Your increments are off by a multiple of N
-int encoderStepsPerDetent = 4;
+const int encoderStepsPerDetent = 4;
 
 
 
@@ -99,8 +95,8 @@ int encoderStepsPerDetent = 4;
 
 
 
-int PRESSED = LOW;
-int UNPRESSED = HIGH;
+const int PRESSED = LOW;
+const int UNPRESSED = HIGH;
 
 // Time standards
 const long secondsPerMin = 60;
@@ -126,4 +122,4 @@ int threeWayPins[2] = {MOVELEFT_PIN, MOVERIGHT_PIN};
 long oldEncoderPosition  = -999999;
 
 // Calculated max rotary encoder readings for Max Speed
-long maxEncoderPosition = (MAXINCHESPERMIN / SPEEDINCREMENT) * encoderStepsPerDetent;
+const long maxEncoderPosition = (MAXINCHESPERMIN / SPEEDINCREMENT) * encoderStepsPerDetent;

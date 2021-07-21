@@ -14,7 +14,7 @@ class FastStepper {
     private: 
         // Timing and pulse variables
         unsigned long prevMicros = 0;
-        unsigned long microsPerStep = 60606;
+        unsigned long microsPerStep = startMicrosPerStep;
 
         // Acceleration parameters
         unsigned long prevMillis = 0;
@@ -59,84 +59,100 @@ class FastStepper {
         
         void microsBetweenSteps() {
             if (this->currentStepsPerSec > 0) {
-                noInterrupts();
+                //noInterrupts();
                 this->microsPerStep = microsPerSec / this->currentStepsPerSec;
                 if (this->microsPerStep < minMicrosPerStep) { // If it's trying to run faster than max.
                     this->microsPerStep = microsPerStep; // Error catching for runaway math.
                 }
-                interrupts();
+                //interrupts();
             }
             else {  // Somehow steps/sec got negative, error correct to slowest speed.
-                noInterrupts();
+                //noInterrupts();
                 this->microsPerStep = startMicrosPerStep;  // Error catching, rarely if ever executes
-                interrupts();
+                //interrupts();
             }
         }
 
         void accelerateTo(long stepsPerSec) {
+            //noInterrupts();
             unsigned long currLoopMillis = millis();
-            noInterrupts();
             long timeSinceLastAccel = currLoopMillis - this->prevMillis;
             if (timeSinceLastAccel >= accelInterval) { 
                 //Increment timers any time we accelerate
-                //this->prevMillis = currLoopMillis;
-                this->prevMillis += accelInterval;
+                this->prevMillis = currLoopMillis; // Less smooth, more reliable
+                //this->prevMillis += accelInterval;
                 
-                // Current speed is zero, or too slow to accel with torque so..
-                // jerk up to minimum speed then start accelerating.
-                if (this->microsPerStep < startMicrosPerStep) {
+                // Current speed is zero, jerk up to minimum speed then start accelerating.
+                if (this->currentStepsPerSec <= 0) {
+                    this->currentStepsPerSec += accelRate; // Increment steps/sec
                     this->microsPerStep = startMicrosPerStep; // Set minimum startup speed
                     digitalWriteFast(this->controlPins[2], LOW); // Enable the driver once we have step delay
+
+                    if (DEBUG) {
+                        Serial.print("Starting State: ");
+                        Serial.print("Max Steps / Sec: "); Serial.println(maxStepsPerSec);
+                        Serial.print("Set Steps / Sec: "); Serial.println(this->setStepsPerSec);
+                        Serial.print("Curr Steps / Sec: "); Serial.println(this->currentStepsPerSec);
+                        Serial.print("Micros / Step: "); Serial.println(this->microsPerStep);
+                        Serial.println();
+                    }
                 }
                 // Accelerate until maxed
                 else if (this->currentStepsPerSec < stepsPerSec) {
                     this->currentStepsPerSec += accelRate;
-                }
-                
-                if (this->currentStepsPerSec > stepsPerSec) {
-                    // we overshot slightly on the last loop, correct it
-                    this->currentStepsPerSec = stepsPerSec;
-                }
+                    if (this->currentStepsPerSec > stepsPerSec) {  //Overshot correction for set speed
+                        // we overshot slightly, correct it
+                        this->currentStepsPerSec = stepsPerSec;
+                    }
+                    this->microsBetweenSteps(); // Calc and store the delay between pulses
 
-                if (DEBUG) {
-                    Serial.print("Accel: ");
-                    Serial.print(this->currentStepsPerSec);
-                    Serial.println(" Steps/sec");
-                } 
-                
-                this->microsBetweenSteps(); // Calc and store the delay between pulses
-                interrupts();
-            }
+                    if (DEBUG) {
+                        Serial.print("Accel: "); Serial.print(this->currentStepsPerSec); Serial.println(" Steps/sec");
+                        Serial.print("Millis: "); Serial.println(currLoopMillis);
+                        Serial.print("Prev Millis: "); Serial.println(this->prevMillis);
+                        Serial.print("Time Since Last: "); Serial.println(timeSinceLastAccel);
+                    } 
+                }
+            }   
+            //interrupts();            
         }
 
-        void decelerateTo(long stepsPerSec, bool fast = false) {
-            if (millis() - this->prevMillis >= accelInterval) { 
+        void decelerateTo(long stepsPerSec) {
+            //noInterrupts();
+            unsigned long currLoopMillis = millis();
+            long timeSinceLastAccel = currLoopMillis - this->prevMillis;
+            if (timeSinceLastAccel >= accelInterval) { 
                 //Increment timers any time we accelerate
-                this->prevMillis = millis();
+                this->prevMillis = currLoopMillis; // Less smooth, more reliable
+                //this->prevMillis += accelInterval;
 
                 // Decelerate until set speed or 0
-                if (this->currentStepsPerSec < stepsPerSec) {
-                    // we overshot slightly on the last loop, correct it
-                    this->currentStepsPerSec = stepsPerSec;
-                }
-                else {
-                    /* if (fast) {
-                        this->currentStepsPerSec -= (accelRate * 2);
-                    } 
-                    else {*/
-                        this->currentStepsPerSec -= accelRate * 2;
-                    //}
-                    
-                }
-
-                // Once stopped, shut things down.
-                if (this->currentStepsPerSec <= 0) {
-                    this->currentStepsPerSec = 0; // Catch for overshooting stop.
-                    this->microsPerStep = minMicrosPerStep;  // Reset to min speed delay.
-                    //TODO: Redundant digitalWriteFast(this->controlPins[2], HIGH); // Disable the driver once we stop
-                }
-                else {
+                if (this->currentStepsPerSec > 0) {  // Still slowing down
+                    this->currentStepsPerSec -= accelRate;
+                    if (this->currentStepsPerSec <= stepsPerSec) { // Stop decel'ing at set speed.
+                        // We overshot slightly, correct it
+                        this->currentStepsPerSec = stepsPerSec;
+                    }
                     this->microsBetweenSteps(); // Calc and store the delay between pulses
+                }
+                else if (this->currentStepsPerSec <= 0) {
+                    this->currentStepsPerSec = 0;
+                    this->microsPerStep = startMicrosPerStep; // Set minimum startup speed
+                    digitalWriteFast(this->controlPins[2], HIGH); // Disable the driver once we hit bottom limit
+                }
+                else { // Once stop limit is hit, shut things down.
+                    this->currentStepsPerSec = 0; // Catch for overshooting stop.
+                    this->microsPerStep = startMicrosPerStep;  // Reset to slowest-speed delay value.
+                    digitalWriteFast(this->controlPins[2], HIGH); // Disable the driver once we stop
+
+                    if (DEBUG) {
+                        Serial.print("Stopped State: ");
+                        Serial.print("Max Steps / Sec: "); Serial.println(maxStepsPerSec);
+                        Serial.print("Set Steps / Sec: "); Serial.println(this->setStepsPerSec);
+                        Serial.print("Curr Steps / Sec: "); Serial.println(this->currentStepsPerSec);
+                        Serial.print("Micros / Step: "); Serial.println(this->microsPerStep);
+                        Serial.println();
+                    }
                 }
 
                 if (DEBUG) {
@@ -144,35 +160,42 @@ class FastStepper {
                     Serial.print(this->currentStepsPerSec);
                     Serial.println(" Steps/sec");
                 }
-                
-                
-                
-            } 
+            }
+            //interrupts(); 
         }
 
         void step() {
-            long timeSinceLastPulse = micros() - this->prevMicros;
-            noInterrupts();
+            //noInterrupts();
+            bool readyToPulse = false;
+            unsigned long currLoopMicros = micros();
+            long timeSinceLastPulse = currLoopMicros - this->prevMicros;
             // If the elapsed time since last step is enough, or the timer rolled over, step again
-            if (timeSinceLastPulse >= signed(this->microsPerStep) || timeSinceLastPulse <= 0) { 
-                //Increment timers any time we step
-                if (timeSinceLastPulse < 0) {
-                    this->prevMicros = micros(); // Rollover handling, restart the timer.
-                }
-                else {
-                    this->prevMicros += this->microsPerStep; // Increment the delay
-                }
-
-                
-                if (this->currentStepsPerSec > 0 && this->microsPerStep > minMicrosPerStep) {
-                    //Pulse the driver
-                    digitalWriteFast(this->controlPins[0], HIGH);
-                    delayMicroseconds(pulseWidthMicroseconds);
-                    digitalWriteFast(this->controlPins[0], LOW);
-                }
-                
+            if (timeSinceLastPulse >= this->microsPerStep) {
+                this->prevMicros = currLoopMicros; // Increment the delay
+                readyToPulse = true;
             }
-            interrupts();
+            else if (timeSinceLastPulse <= 0) { // Timer rollover handling
+                this->prevMicros = micros(); // Rollover handling, restart the timer.
+                readyToPulse = true;
+            }
+
+            /** It would seem this is redundant logic but during decel I was
+             * having tons of issues with a rapid spike of pulses right as the
+             * speed approached zero. All the math checks out, but I suspect some
+             * integer rounding to zero error is slipping my perception and causing
+             * an 'infinite' number of pulses to go through right in the last 10 millis
+             * or so.  ¯\_(ツ)_/¯ 
+             */
+            if (readyToPulse && // Enough time has passed, and...
+                    this->currentStepsPerSec > 0 && // We have at least some steps programmed, and...
+                    this->microsPerStep <= startMicrosPerStep && // At least minimum speed, and...
+                    this->microsPerStep >= minMicrosPerStep) { // The speed isn't runaway beyond max, then..
+                //Pulse the driver
+                digitalWriteFast(this->controlPins[0], HIGH);
+                delayMicroseconds(pulseWidthMicroseconds);
+                digitalWriteFast(this->controlPins[0], LOW);
+            }
+            //interrupts();
         }
 
 
@@ -203,11 +226,11 @@ class FastStepper {
 
             // Pulse the motor pin once to reduce ambient noise
 	        digitalWriteFast(this->controlPins[0], HIGH);
-            delay(5);
+            delayMicroseconds(pulseWidthMicroseconds);
 	        digitalWriteFast(this->controlPins[0], LOW);
 
             // Set default speed (0).
-            this->setSpeed(encodedInchesPerMin);
+            this->setSpeed(0);
             this->stop();
 	
             // Pull the enable pin high to disable the driver by default
@@ -267,12 +290,17 @@ class FastStepper {
                 this->accelerateTo(this->setStepsPerSec);    
             }
             // If a new slower speed was entered, decelerate to it
-            else if (this->currentStepsPerSec > 0 && this->currentStepsPerSec > this->setStepsPerSec) {
+            else if (this->setStepsPerSec >= 0 && this->currentStepsPerSec > this->setStepsPerSec) {
                 this->decelerateTo(this->setStepsPerSec);
             }
-
+            // This might not be any different than above?
+            /* else if (this->setStepsPerSec == 0 && this->currentStepsPerSec > 0) {
+                this->decelerateTo(0);
+            } */
+            
+            // Stepping is pointless when debugging, too many blocking signals.
             if (!DEBUG) {
-                this->step(); // Stepping is pointless when debugging, too many blocking signals.
+                this->step(); //Step before incrementing/decrementing speed
             }
                 
         }
@@ -286,15 +314,15 @@ class FastStepper {
             
             // If it's still moving, decelerate to 0
             if (this->currentStepsPerSec > 0) {
-                this->decelerateTo(0, fast);
                 if (!DEBUG) {
                     this->step(); // Stepping is pointless when debugging, too many blocking signals.
                 }
+                // Step before decrementing speed
+                this->decelerateTo(0);
             }
             else if (this->doOnceWhenStopped && this->currentStepsPerSec <= 0) { // Stopped, do these things once.
                 this->doOnceWhenStopped = false;  // Reset flag, used to reduce redundant processing.
-                digitalWriteFast(this->controlPins[2], HIGH); // Disable the driver
-                digitalWriteFast(this->controlPins[0], LOW); // Make sure the pulse pin is off
+                //digitalWriteFast(this->controlPins[0], LOW); // Make sure the pulse pin is off
                 
                 if (this->paused) {  // Reset paused state
                     this->paused = !this->paused;

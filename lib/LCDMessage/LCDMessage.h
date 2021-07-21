@@ -30,7 +30,7 @@ class LCDMessage {
             this->line1String = "-- POWER FEED --"; 
             this->line2String = "---- READY! ----";
             this->writeLCD();
-            delay(3000);
+            delay(1500);
             lcd.clear();
         }
 
