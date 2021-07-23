@@ -28,45 +28,51 @@ class MomentarySwitch {
         int INPUT_PIN;
 
         void rapidFeed() {
-            if (this->currButtonState == PRESSED) {
-                if (DEBUG) {
-                    Serial.print("RAPID: ");
-                } 
-
-                lcdMessage.rapidMessage();
-                stepper->setSpeedInUs(stepperUtils.rapidMicrosPerStep);
-            }
-            else {
-                if (DEBUG) {
-                    Serial.print("SLOW: ");
-                }
-
-                lcdMessage.writeSpeed(encodedInchesPerMin);
-                stepper->setSpeedInUs(stepperUtils.microsPerStep);
-            }
-        }
-
-        void pauseFeed() { // This seems backward, but it's correct for a press-then-release switch
-            if (this->currButtonState == UNPRESSED) {
-                if (!this->paused) {
+            if (directionSwitch.directionSwitchOn) {
+                if (this->currButtonState == PRESSED) {
                     if (DEBUG) {
-                        Serial.print("PAUSE: ");
+                        Serial.print("RAPID: ");
                     } 
 
-                    lcdMessage.pausedMessage();
-                    stepper->stopMove();
-                    
+                    lcdMessage.rapidMessage();
+                    stepper->setSpeedInUs(stepperUtils.rapidMicrosPerStep);
+                    stepper->runForward();
                 }
                 else {
                     if (DEBUG) {
-                        Serial.print("RUN: ");
+                        Serial.print("SLOW: ");
                     }
 
                     lcdMessage.writeSpeed(encodedInchesPerMin);
                     stepper->setSpeedInUs(stepperUtils.microsPerStep);
-                    stepperUtils.runMotor();
+                    stepper->runForward();
                 }
-                this->paused = !this->paused; // Invert the state
+            }
+        }
+
+        void pauseFeed() { // This seems backward, but it's correct for a press-then-release switch
+            if (directionSwitch.directionSwitchOn) {
+                if (this->currButtonState == UNPRESSED) {
+                    if (!this->paused) {
+                        if (DEBUG) {
+                            Serial.print("PAUSE: ");
+                        } 
+
+                        lcdMessage.pausedMessage();
+                        stepper->stopMove();
+                        
+                    }
+                    else {
+                        if (DEBUG) {
+                            Serial.print("RUN: ");
+                        }
+
+                        lcdMessage.writeSpeed(encodedInchesPerMin);
+                        stepper->setSpeedInUs(stepperUtils.microsPerStep);
+                        stepper->runForward();
+                    }
+                    this->paused = !this->paused; // Invert the state
+                }
             }
         }
 
@@ -86,13 +92,6 @@ class MomentarySwitch {
             // Set pin default state
             this->INPUT_PIN = pin;
             pinModeFast(this->INPUT_PIN, INPUT_PULLUP);
-
-
-            if (DEBUG) {
-                Serial.print("Rapid Initialized: ");
-                Serial.print(MAXINCHESPERMIN);
-                Serial.println(" IPM");
-            } 
         }
 
         void read() {

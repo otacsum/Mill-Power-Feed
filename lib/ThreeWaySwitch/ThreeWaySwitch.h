@@ -16,15 +16,41 @@ class ThreeWaySwitch {
         // State management
         int lastSwitchState = UNPRESSED;
         int currSwitchState = UNPRESSED;
+        // Direction pin state HIGH || LOW
+        int direction = LOW;
 
         // Safety Interlock - Cannot start if switch is on at boot
-        bool runEnabled = false;
+        bool safeToRun = false;
 
         // Hardware config
         int LEFT_PIN;
         int RIGHT_PIN;
 
+        void setDirection(int directionPinState) {
+            this->direction = directionPinState;
+            lcdMessage.printArrows(this->direction);
+        }
+
+        void runMotor() {
+            while (stepper->isRunning()) {
+                stepper->stopMove(); // In case it's still running.
+            }
+            if (encodedInchesPerMin > 0) {
+                digitalWriteFast(DIRECTION_PIN, this->direction);
+                stepper->runForward();
+            }
+        }
+
+        void stopMotor() {
+            lcdMessage.writeSpeed(encodedInchesPerMin);
+            lcdMessage.printArrows(3); // "STOPPED"
+            stepper->stopMove();
+        }
+
     public:
+        // State management
+        bool directionSwitchOn = false;
+
         // Constructor
         ThreeWaySwitch() {}
 
@@ -45,7 +71,7 @@ class ThreeWaySwitch {
                     &&
                     digitalReadFast(this->LEFT_PIN) != PRESSED) {
                 readyState = "Ready";
-                this->runEnabled = true;
+                this->safeToRun = true;
             } 
             else {  // Switch is on at boot, disable switch until reset.
                 readyState = "Please Set Direction to Middle";
@@ -58,8 +84,8 @@ class ThreeWaySwitch {
                     }
                 
                 // Enable safety flag if it was previously suppressed
-                if (!this->runEnabled) {
-                    this->runEnabled = true;
+                if (!this->safeToRun) {
+                    this->safeToRun = true;
                 }
             }
 
@@ -100,19 +126,20 @@ class ThreeWaySwitch {
                         this->currSwitchState = switchReading; // Reset the state
 
                         if (this->currSwitchState == PRESSED) { // Switch is on
+                            this->directionSwitchOn = true;
                             
                             if (digitalReadFast(this->RIGHT_PIN) == PRESSED) {
                                 // Display on LCD, set direction pin output, and run motor.
-                                stepperUtils.setDirection(HIGH);
-                                stepperUtils.runMotor();
+                                this->setDirection(HIGH);
+                                this->runMotor();
                             }
                             else if (digitalReadFast(this->LEFT_PIN) == PRESSED) {
-                                stepperUtils.setDirection(LOW);
-                                stepperUtils.runMotor();
+                                this->setDirection(LOW);
+                                this->runMotor();
                             }
 
                             if (DEBUG) {
-                                if (this->runEnabled) {
+                                if (this->safeToRun) {
                                     Serial.println("Direction Switch: ON");
                                 }
                                 else {
@@ -121,7 +148,9 @@ class ThreeWaySwitch {
                             } 
                         }
                         else { // Switch is off
-                            stepperUtils.stopMotor();
+                            this->directionSwitchOn = false;
+
+                            this->stopMotor();
                             
                             if (DEBUG) {
                                 Serial.println("Direction Switch: OFF");

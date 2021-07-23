@@ -63,7 +63,6 @@ void setup() {
         stepper->setAutoEnable(true);
         stepper->setDelayToEnable(50);
         stepper->setDelayToDisable(1000);
-        stepper->setSpeedInUs(104);  // µs/step
         stepper->setAcceleration(5000); // Steps/sec^2
     }
 

@@ -15,9 +15,6 @@ class FastStepperUtils {
         // Time standards
         const long secondsPerMin = 60;
         const unsigned long microsPerSec = 1000000;
-        
-        // Direction pin state HIGH || LOW
-        int direction = LOW;
 
     public:
         // Timing and pulse variables
@@ -51,26 +48,6 @@ class FastStepperUtils {
         void setSpeed(float inchesPerMin) {
             lcdMessage.writeSpeed(inchesPerMin);
             this->microsPerStep = this->getSpeed(inchesPerMin);
-        }
-
-        void setDirection(int directionPinState) {
-            this->direction = directionPinState;
-            lcdMessage.printArrows(this->direction);
-        }
-
-        void runMotor() {
-            while (stepper->isRunning()) {
-                stepper->stopMove(); // In case it's still running.
-            }
-            if (encodedInchesPerMin > 0) {
-                digitalWriteFast(DIRECTION_PIN, this->direction);
-                stepper->move(1);
-                stepper->keepRunning();
-            }
-        }
-
-        void stopMotor() {
-            lcdMessage.printArrows(3); // "STOPPED"
-            stepper->stopMove();
+            stepper->setSpeedInUs(this->microsPerStep);
         }
 };
