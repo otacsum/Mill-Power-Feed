@@ -18,16 +18,17 @@ bool DEBUG = false;
 #define rotaryMomentaryPin 4 // When pressing in on the rotary knob
 
 // Pins used for stepper control signals
-#define PULSE_PIN 5
-#define DIRECTION_PIN 6
-#define ENABLE_PIN 7
+// This is "timer 4" on a Mega 2560, only these three pins (or another timer triplet may be used)
+#define PULSE_PIN 6
+#define DIRECTION_PIN 7
+#define ENABLE_PIN 8
 
 // Pins used for direction signals
-#define MOVELEFT_PIN 8
-#define MOVERIGHT_PIN 9
+#define MOVELEFT_PIN 9
+#define MOVERIGHT_PIN 10
 
 // Pin used for rapids signal
-#define RAPID_PIN 10
+#define RAPID_PIN 11
 
 // LCD Pins
 #define rs_PIN 48
@@ -40,8 +41,8 @@ bool DEBUG = false;
 
 //Stepper Driver Configuration Values
 //#define STEPSPERREV 200 // Full-stepping (200 full steps per rev) 2x precision w/ 2:1 pulley
-#define STEPSPERREV 400 // Half-stepping (200 full steps => 400 half steps per rev) 4x precision w/ 2:1 pulley
-//#define STEPSPERREV 800 // Quarter-stepping (200 full steps => 800 quarter steps per rev) 8x precision w/ 2:1 pulley
+//#define STEPSPERREV 400 // Half-stepping (200 full steps => 400 half steps per rev) 4x precision w/ 2:1 pulley
+#define STEPSPERREV 800 // Quarter-stepping (200 full steps => 800 quarter steps per rev) 8x precision w/ 2:1 pulley
 #define REVSPERINCH 20 // 2:1 Pulley Reduction, 10 screw turns per inch
 
 // Imperial milling speeds defined in IPM, to be reduced to step pulses.

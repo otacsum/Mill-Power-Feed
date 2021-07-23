@@ -1,5 +1,6 @@
 // Core Arduino libraries
 #include <Arduino.h>
+#include <FastAccelStepper.h>
 #include <LiquidCrystal.h>
 
 // Faster implementation of reading/writing pin states for fast stepper movement.
@@ -19,21 +20,24 @@ LiquidCrystal lcd(rs_PIN, lcdEnable_PIN, d4_PIN, d5_PIN, d6_PIN, d7_PIN);
 LCDMessage lcdMessage;
 
 // Homegrown stepper driver for fast stepping / microstepping.
-#include <FastStepper.h>
-FastStepper stepper(MAXINCHESPERMIN, REVSPERINCH, STEPSPERREV);
+//#include <FastStepper.h>
+//FastStepper stepper(MAXINCHESPERMIN, REVSPERINCH, STEPSPERREV);
+// Create instances of the fast stepper objects.
+FastAccelStepperEngine engine = FastAccelStepperEngine();
+FastAccelStepper *stepper = NULL;
 
 // Controller for a SPDT switch for controlling direction
 #include <ThreeWaySwitch.h>
-ThreeWaySwitch directionSwitch(&stepper, DEBOUNCEMILLIS3WAY);
+ThreeWaySwitch directionSwitch;
 
 // Controller for a momentary SPST N/O switch for rapid function
-#include <MomentarySwitch.h>
-MomentarySwitch rapidButton(&stepper, DEBOUNCEMILLISMOMENTARY, 0);
-MomentarySwitch encoderButton(&stepper, DEBOUNCEMILLISMOMENTARY, 1);
+//#include <MomentarySwitch.h>
+//MomentarySwitch rapidButton(DEBOUNCEMILLISMOMENTARY, 0);
+//MomentarySwitch encoderButton(DEBOUNCEMILLISMOMENTARY, 1);
 
 
-Encoder rotaryEncoder(rotaryPinA, rotaryPinB);
-#include <RotaryEncoder.h> // Custom rotary encoder controller.  
+//Encoder rotaryEncoder(rotaryPinA, rotaryPinB);
+//#include <RotaryEncoder.h> // Custom rotary encoder controller.  
 
 void setup() {
     if (DEBUG) { // Log Events to Serial Monitor
@@ -42,21 +46,35 @@ void setup() {
     
     // Initializes the interface to the LCD screen, and specifies the dimensions (width and height) of the display
     lcd.begin(16,2); 
-    lcdMessage.welcomeMessage();
 
-    // Initialize the pin outputs/inputs
-    stepper.begin(stepperControlPins);
+    // Initialize the pin outputs/inputs and run setup tasks
     directionSwitch.begin(threeWayPins);
-    rapidButton.begin(RAPID_PIN);
-    encoderButton.begin(rotaryMomentaryPin);
+    //rapidButton.begin(RAPID_PIN);
+    //encoderButton.begin(rotaryMomentaryPin);
+
+    // Initialize stepper motor stuff
+    engine.init();
+    stepper = engine.stepperConnectToPin(PULSE_PIN);
+    if (stepper) {
+        //stepper->setDirectionPin(DIRECTION_PIN);
+        pinModeFast(DIRECTION_PIN, OUTPUT);
+        stepper->setEnablePin(ENABLE_PIN);
+        stepper->setAutoEnable(true);
+        stepper->setDelayToEnable(50);
+        stepper->setDelayToDisable(1000);
+        stepper->setSpeedInUs(104);  // µs/step
+        stepper->setAcceleration(5000); // Steps/sec^2
+    }
+
+    // Everything is set up, let's go!
+    lcdMessage.welcomeMessage();
 }
 
 
 void loop() { 
-    directionSwitch.run();
     directionSwitch.read();
-    rapidButton.read();
-    encoderButton.read();
+    //rapidButton.read();
+    //encoderButton.read();
 
-    readRotaryEncoder(); // Abstraction to simplify encoder readings and translation to speed/events.
+    //readRotaryEncoder(); // Abstraction to simplify encoder readings and translation to speed/events.
 }

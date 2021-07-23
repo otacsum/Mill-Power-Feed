@@ -12,17 +12,13 @@ class ThreeWaySwitch {
         
         // Debounce params
         unsigned long lastDebounceTime = 0;  // the last time the output pin was toggled
-        unsigned long debounceDelay;    // millis, increase during init if still bouncy
 
         // State management
         int lastSwitchState = UNPRESSED;
         int currSwitchState = UNPRESSED;
 
-        // Safety Flag - Cannot start if switch is on at boot
+        // Safety Interlock - Cannot start if switch is on at boot
         bool runEnabled = false;
-
-        // Stepper Object References
-        FastStepper* feedMotor;
 
         // Hardware config
         int LEFT_PIN;
@@ -30,10 +26,7 @@ class ThreeWaySwitch {
 
     public:
         // Constructor
-        ThreeWaySwitch(FastStepper* motor, int delay) {
-            this->feedMotor = motor;
-            this->debounceDelay = delay;
-        }
+        ThreeWaySwitch() {};
 
         void begin(int pins[]) {
             String readyState;
@@ -101,7 +94,7 @@ class ThreeWaySwitch {
                     } 
                 }
     
-                if ((millis() - this->lastDebounceTime) > this->debounceDelay) {
+                if ((millis() - this->lastDebounceTime) > DEBOUNCEMILLIS3WAY) {
                     // Button has changed, not bouncing anymore
                     if (switchReading != this->currSwitchState) {
                         this->currSwitchState = switchReading; // Reset the state
@@ -109,12 +102,22 @@ class ThreeWaySwitch {
                         if (this->currSwitchState == PRESSED) { // Switch is on
                             
                             if (digitalReadFast(this->RIGHT_PIN) == PRESSED) {
-                                this->feedMotor->setDirection(1); // Clockwise (relative)
                                 lcdMessage.printArrows(1);
+                                while (stepper->isRunning()) {
+                                    stepper->stopMove(); // In case it's still running.
+                                }
+                                digitalWriteFast(DIRECTION_PIN, HIGH);
+                                stepper->move(1);
+                                stepper->keepRunning();
                             }
                             else if (digitalReadFast(this->LEFT_PIN) == PRESSED) {
-                                this->feedMotor->setDirection(0); // Counter-Clockwise (relative)
                                 lcdMessage.printArrows(0);
+                                while (stepper->isRunning()) {
+                                    stepper->stopMove(); // In case it's still running.
+                                }
+                                digitalWriteFast(DIRECTION_PIN, LOW);
+                                stepper->move(1);
+                                stepper->keepRunning();
                             }
 
                             if (DEBUG) {
@@ -127,8 +130,8 @@ class ThreeWaySwitch {
                             } 
                         }
                         else { // Switch is off
-
                             lcdMessage.printArrows(3); // "STOPPED"
+                            stepper->stopMove();
                             
                             if (DEBUG) {
                                 Serial.println("Direction Switch: OFF");
@@ -137,23 +140,6 @@ class ThreeWaySwitch {
                     }
                 } 
             this->lastSwitchState = switchReading;  // Store the state
-            }
-        }
-
-        void run() {
-            /* if (DEBUG) {
-                Serial.print("In/Min: "); Serial.print(this->feedMotor->currentInchesPerMin);
-                Serial.print(" | MSS: "); Serial.print(this->feedMotor->maxStepsPerSec);
-                Serial.print(" | SSS: "); Serial.print(this->feedMotor->setStepsPerSec);
-                Serial.print(" | CSS: "); Serial.print(this->feedMotor->currentStepsPerSec);
-                Serial.print(" | MicS: "); Serial.println(this->feedMotor->microsPerStep);
-            } */
-
-            if (this->runEnabled && this->currSwitchState == PRESSED) { // Safety Flag is safe and switch is on, not bouncing.
-                this->feedMotor->run();
-            }
-            else {
-                this->feedMotor->stop();
             }
         }
 };
