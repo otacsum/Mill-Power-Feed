@@ -26,7 +26,7 @@ class ThreeWaySwitch {
 
     public:
         // Constructor
-        ThreeWaySwitch() {};
+        ThreeWaySwitch() {}
 
         void begin(int pins[]) {
             String readyState;
@@ -102,22 +102,13 @@ class ThreeWaySwitch {
                         if (this->currSwitchState == PRESSED) { // Switch is on
                             
                             if (digitalReadFast(this->RIGHT_PIN) == PRESSED) {
-                                lcdMessage.printArrows(1);
-                                while (stepper->isRunning()) {
-                                    stepper->stopMove(); // In case it's still running.
-                                }
-                                digitalWriteFast(DIRECTION_PIN, HIGH);
-                                stepper->move(1);
-                                stepper->keepRunning();
+                                // Display on LCD, set direction pin output, and run motor.
+                                stepperUtils.setDirection(HIGH);
+                                stepperUtils.runMotor();
                             }
                             else if (digitalReadFast(this->LEFT_PIN) == PRESSED) {
-                                lcdMessage.printArrows(0);
-                                while (stepper->isRunning()) {
-                                    stepper->stopMove(); // In case it's still running.
-                                }
-                                digitalWriteFast(DIRECTION_PIN, LOW);
-                                stepper->move(1);
-                                stepper->keepRunning();
+                                stepperUtils.setDirection(LOW);
+                                stepperUtils.runMotor();
                             }
 
                             if (DEBUG) {
@@ -130,8 +121,7 @@ class ThreeWaySwitch {
                             } 
                         }
                         else { // Switch is off
-                            lcdMessage.printArrows(3); // "STOPPED"
-                            stepper->stopMove();
+                            stepperUtils.stopMotor();
                             
                             if (DEBUG) {
                                 Serial.println("Direction Switch: OFF");

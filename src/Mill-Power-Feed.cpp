@@ -19,25 +19,26 @@ LiquidCrystal lcd(rs_PIN, lcdEnable_PIN, d4_PIN, d5_PIN, d6_PIN, d7_PIN);
 #include <LCDMessage.h> // Custom LCD events to minimize duplicate code.  
 LCDMessage lcdMessage;
 
-// Homegrown stepper driver for fast stepping / microstepping.
-//#include <FastStepper.h>
-//FastStepper stepper(MAXINCHESPERMIN, REVSPERINCH, STEPSPERREV);
 // Create instances of the fast stepper objects.
 FastAccelStepperEngine engine = FastAccelStepperEngine();
 FastAccelStepper *stepper = NULL;
+
+// Stepper utilities to compliment FastAccelStepper and other button states
+#include <FastStepperUtils.h>
+FastStepperUtils stepperUtils;
 
 // Controller for a SPDT switch for controlling direction
 #include <ThreeWaySwitch.h>
 ThreeWaySwitch directionSwitch;
 
 // Controller for a momentary SPST N/O switch for rapid function
-//#include <MomentarySwitch.h>
-//MomentarySwitch rapidButton(DEBOUNCEMILLISMOMENTARY, 0);
-//MomentarySwitch encoderButton(DEBOUNCEMILLISMOMENTARY, 1);
+#include <MomentarySwitch.h>
+MomentarySwitch rapidButton(DEBOUNCEMILLISMOMENTARY, 0);
+MomentarySwitch encoderButton(DEBOUNCEMILLISMOMENTARY, 1);
 
 
-//Encoder rotaryEncoder(rotaryPinA, rotaryPinB);
-//#include <RotaryEncoder.h> // Custom rotary encoder controller.  
+Encoder rotaryEncoder(rotaryPinA, rotaryPinB);
+#include <RotaryEncoder.h> // Custom rotary encoder controller.  
 
 void setup() {
     if (DEBUG) { // Log Events to Serial Monitor
@@ -49,8 +50,8 @@ void setup() {
 
     // Initialize the pin outputs/inputs and run setup tasks
     directionSwitch.begin(threeWayPins);
-    //rapidButton.begin(RAPID_PIN);
-    //encoderButton.begin(rotaryMomentaryPin);
+    rapidButton.begin(RAPID_PIN);
+    encoderButton.begin(rotaryMomentaryPin);
 
     // Initialize stepper motor stuff
     engine.init();
@@ -73,8 +74,8 @@ void setup() {
 
 void loop() { 
     directionSwitch.read();
-    //rapidButton.read();
-    //encoderButton.read();
+    rapidButton.read();
+    encoderButton.read();
 
-    //readRotaryEncoder(); // Abstraction to simplify encoder readings and translation to speed/events.
+    readRotaryEncoder(); // Abstraction to simplify encoder readings and translation to speed/events.
 }

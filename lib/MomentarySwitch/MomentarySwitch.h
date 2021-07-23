@@ -24,9 +24,6 @@ class MomentarySwitch {
         // Modes [0 = Rapid Movement, 1 = Pause Function, 2 = Change Units]
         int buttonMode;
 
-        // Stepper Object References
-        FastStepper* feedMotor;
-
         // Hardware config
         int INPUT_PIN;
 
@@ -36,15 +33,16 @@ class MomentarySwitch {
                     Serial.print("RAPID: ");
                 } 
 
-                this->feedMotor->setSpeed(MAXINCHESPERMIN);
                 lcdMessage.rapidMessage();
+                stepper->setSpeedInUs(stepperUtils.rapidMicrosPerStep);
             }
             else {
                 if (DEBUG) {
                     Serial.print("SLOW: ");
                 }
 
-                this->feedMotor->setSpeed(encodedInchesPerMin);
+                lcdMessage.writeSpeed(encodedInchesPerMin);
+                stepper->setSpeedInUs(stepperUtils.microsPerStep);
             }
         }
 
@@ -55,8 +53,8 @@ class MomentarySwitch {
                         Serial.print("PAUSE: ");
                     } 
 
-                    this->feedMotor->setSpeed(0);
                     lcdMessage.pausedMessage();
+                    stepper->stopMove();
                     
                 }
                 else {
@@ -64,7 +62,9 @@ class MomentarySwitch {
                         Serial.print("RUN: ");
                     }
 
-                    this->feedMotor->setSpeed(encodedInchesPerMin);
+                    lcdMessage.writeSpeed(encodedInchesPerMin);
+                    stepper->setSpeedInUs(stepperUtils.microsPerStep);
+                    stepperUtils.runMotor();
                 }
                 this->paused = !this->paused; // Invert the state
             }
@@ -72,9 +72,12 @@ class MomentarySwitch {
 
     public:
         // Constructor
-        // Modes [0 = Rapid Movement, 1 = Pause Function, 2 = Change Units]
-        MomentarySwitch(FastStepper* motor, int delay, int mode) {
-            this->feedMotor = motor;
+        /** Modes 
+         *      0 = Rapid Movement
+         *      1 = Pause Function
+         *      2 = Change Units
+         */
+        MomentarySwitch(unsigned long delay, int mode) {
             this->debounceDelay = delay;
             this->buttonMode = mode;
         };

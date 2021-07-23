@@ -42,14 +42,14 @@ bool DEBUG = false;
 //Stepper Driver Configuration Values
 //#define STEPSPERREV 200 // Full-stepping (200 full steps per rev) 2x precision w/ 2:1 pulley
 //#define STEPSPERREV 400 // Half-stepping (200 full steps => 400 half steps per rev) 4x precision w/ 2:1 pulley
-#define STEPSPERREV 800 // Quarter-stepping (200 full steps => 800 quarter steps per rev) 8x precision w/ 2:1 pulley
-#define REVSPERINCH 20 // 2:1 Pulley Reduction, 10 screw turns per inch
+long STEPSPERREV = 800; // Quarter-stepping (200 full steps => 800 quarter steps per rev) 8x precision w/ 2:1 pulley
+int REVSPERINCH = 20; // 2:1 Pulley Reduction, 10 screw turns per inch
 
 // Imperial milling speeds defined in IPM, to be reduced to step pulses.
 // This is the maximum rate that can be programmed in using the rotary encoder and...
 // also the maximum speed that will be achieved when traversing in rapid mode.
-#define MAXINCHESPERMIN 36.00
-#define SPEEDINCREMENT 0.25 // Inch/Min per step of the rotary encoder.
+float MAXINCHESPERMIN = 36.00;
+float SPEEDINCREMENT = 0.25; // Inch/Min per step of the rotary encoder.
 
 
 

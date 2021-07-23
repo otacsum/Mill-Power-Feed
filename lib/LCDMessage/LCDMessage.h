@@ -68,10 +68,10 @@ class LCDMessage {
         void printArrows(int direction) {
             this->directionState = direction;
             switch (direction) {
-                case 0:
+                case LOW:
                     this->line2String = "         >>>>   ";
                     break;
-                case 1:
+                case HIGH:
                     this->line2String = "   <<<<         ";
                     break;
                 default:

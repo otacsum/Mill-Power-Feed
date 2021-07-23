@@ -13,7 +13,7 @@ void readRotaryEncoder() {
   // If it has changed, write the new value to the stepper object.
   if (newEncoderPosition != oldEncoderPosition) {
     encodedInchesPerMin = newEncoderPosition * SPEEDINCREMENT;
-    stepper.setSpeed(encodedInchesPerMin);
+    stepperUtils.setSpeed(encodedInchesPerMin);
     oldEncoderPosition = newEncoderPosition; // State management
   }  
 }
