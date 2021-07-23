@@ -42,17 +42,18 @@ void setup() {
     
     // Initializes the interface to the LCD screen, and specifies the dimensions (width and height) of the display
     lcd.begin(16,2); 
-    lcdMessage.welcomeMessage();
 
     // Initialize the pin outputs/inputs
     stepper.begin(stepperControlPins);
     directionSwitch.begin(threeWayPins);
+    lcdMessage.welcomeMessage();
     rapidButton.begin(RAPID_PIN);
     encoderButton.begin(rotaryMomentaryPin);
 }
 
 
 void loop() { 
+    stepper.step(); // Always update the step timer, even when not running
     directionSwitch.run();
     directionSwitch.read();
     rapidButton.read();

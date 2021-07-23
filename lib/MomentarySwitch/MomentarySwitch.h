@@ -38,7 +38,7 @@ class MomentarySwitch {
                 } 
 
                 this->feedMotor->setSpeed(MAXINCHESPERMIN);
-                lcdMessage.rapidMessage();
+                //lcdMessage.rapidMessage();
             }
             else {
                 if (DEBUG) {
@@ -47,7 +47,7 @@ class MomentarySwitch {
                 if (this->previouslyPaused) { // Was paused, go to zero, set state, print message.
                     this->feedMotor->setSpeed(0);
                     this->feedMotor->paused = !this->feedMotor->paused;
-                    lcdMessage.pausedMessage();
+                    //lcdMessage.pausedMessage();
                 }
                 else {
                     //Not previously paused, set speed.
@@ -64,7 +64,7 @@ class MomentarySwitch {
                     } 
 
                     this->feedMotor->setSpeed(0);
-                    lcdMessage.pausedMessage();
+                    //lcdMessage.pausedMessage();
                     
                     this->feedMotor->paused = !this->feedMotor->paused; // Set pause state
                 }
@@ -103,7 +103,7 @@ class MomentarySwitch {
         void read() {
             // Only read once every N millis, not on every loop
             if ((millis() - this->lastReadMillis) > SWITCHREADDELAY) {
-                this->lastReadMillis += SWITCHREADDELAY;
+                this->lastReadMillis = millis();
 
                 int buttonReading = digitalReadFast(this->INPUT_PIN);
 

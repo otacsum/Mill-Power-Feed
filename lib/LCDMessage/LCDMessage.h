@@ -52,10 +52,10 @@ class LCDMessage {
             this->line1String = this->speedPrefix + String(encodedInchesPerMin, 2);
             switch (this->directionState) {
                 case 0:
-                    this->line2String = "---- PAUSED >>>>";
+                    this->line2String = "<<<< PAUSED ----";
                     break;
                 case 1:
-                    this->line2String = "<<<< PAUSED ----";
+                    this->line2String = "---- PAUSED >>>>";
                     break;
             }
             this->writeLCD();
@@ -80,10 +80,10 @@ class LCDMessage {
             this->directionState = direction;
             switch (direction) {
                 case 0:
-                    this->line2String = "         >>>>   ";
+                    this->line2String = "   <<<<         ";
                     break;
                 case 1:
-                    this->line2String = "   <<<<         ";
+                    this->line2String = "         >>>>   ";
                     break;
                 default:
                     this->line2String = "  \xff STOPPED \xff   ";

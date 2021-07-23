@@ -77,7 +77,7 @@ class ThreeWaySwitch {
 
         void read() {
             if ((millis() - this->lastReadMillis) > SWITCHREADDELAY) {
-                this->lastReadMillis += SWITCHREADDELAY;
+                this->lastReadMillis = millis();
 
                 // Debounce doesn't care which side it's switched to
                 // We're looking for change in state from low to high
@@ -110,11 +110,11 @@ class ThreeWaySwitch {
                             
                             if (digitalReadFast(this->RIGHT_PIN) == PRESSED) {
                                 this->feedMotor->setDirection(1); // Clockwise (relative)
-                                lcdMessage.printArrows(1);
+                                //lcdMessage.printArrows(1);
                             }
                             else if (digitalReadFast(this->LEFT_PIN) == PRESSED) {
                                 this->feedMotor->setDirection(0); // Counter-Clockwise (relative)
-                                lcdMessage.printArrows(0);
+                                //lcdMessage.printArrows(0);
                             }
 
                             if (DEBUG) {
@@ -128,7 +128,7 @@ class ThreeWaySwitch {
                         }
                         else { // Switch is off
 
-                            lcdMessage.printArrows(3); // "STOPPED"
+                            //lcdMessage.printArrows(3); // "STOPPED"
                             
                             if (DEBUG) {
                                 Serial.println("Direction Switch: OFF");

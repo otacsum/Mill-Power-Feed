@@ -40,8 +40,8 @@ bool DEBUG = false;
 
 //Stepper Driver Configuration Values
 //const unsigned long STEPSPERREV = 200; // Full-stepping (200 full steps per rev) 2x precision w/ 2:1 pulley
-const unsigned long STEPSPERREV = 400; // Half-stepping (200 full steps => 400 half steps per rev) 4x precision w/ 2:1 pulley
-//const unsigned long STEPSPERREV = 800; // Quarter-stepping (200 full steps => 800 quarter steps per rev) 8x precision w/ 2:1 pulley
+//const unsigned long STEPSPERREV = 400; // Half-stepping (200 full steps => 400 half steps per rev) 4x precision w/ 2:1 pulley
+const unsigned long STEPSPERREV = 800; // Quarter-stepping (200 full steps => 800 quarter steps per rev) 8x precision w/ 2:1 pulley
 const unsigned long REVSPERINCH = 20; // 2:1 Pulley Reduction, 10 screw turns per inch
 
 // Imperial milling speeds defined in IPM, to be reduced to step pulses.
@@ -64,12 +64,12 @@ const unsigned long SWITCHREADDELAY = 50;
 
 // Motor pulse width, make this as long as possible without impacting your RPMs
 // Sending the driver's minimum requirement will reduce torque, even though it's not supposed to.
-const unsigned int pulseWidthMicroseconds = 50; 
+const unsigned int pulseWidthMicroseconds = 5; 
 
 // Acceleration Params (linear acceleration)
 const float MININCHESPERMINUTE = 0.1;
-const long accelInterval = 10;  // Millis between increasing velocity
-const long accelRate = 20; // Steps increased per accelInterval
+const long accelInterval = 5;  // Millis between increasing velocity
+const long accelRate = STEPSPERREV / 40; // Steps increased per accelInterval
 
 
 // Rotary Encoder Increment Steps per Detent
@@ -110,6 +110,9 @@ const unsigned long minMicrosPerStep = microsPerSec / maxStepsPerSec;
 // Max delay between motor pulses, basically accel jerk limit from zero.
 const unsigned long startStepsPerSec = (MININCHESPERMINUTE * REVSPERINCH * STEPSPERREV) / secondsPerMin;
 const unsigned long startMicrosPerStep = microsPerSec / startStepsPerSec;
+
+// Decelerate at a slower rate above this speed - 70% of max.
+const long fastDecelThresholdSteps = maxStepsPerSec * 0.7;
 
 // Velocity value set by the rotary encoder
 volatile float encodedInchesPerMin = 0.00;
