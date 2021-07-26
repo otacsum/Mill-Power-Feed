@@ -33,8 +33,8 @@ ThreeWaySwitch directionSwitch;
 
 // Controller for a momentary SPST N/O switch for rapid function
 #include <MomentarySwitch.h>
-MomentarySwitch rapidButton(DEBOUNCEMILLISMOMENTARY, 0);
 MomentarySwitch encoderButton(DEBOUNCEMILLISMOMENTARY, 1);
+MomentarySwitch rapidButton(DEBOUNCEMILLISMOMENTARY, 0);
 
 
 Encoder rotaryEncoder(rotaryPinA, rotaryPinB);
@@ -48,11 +48,6 @@ void setup() {
     // Initializes the interface to the LCD screen, and specifies the dimensions (width and height) of the display
     lcd.begin(16,2); 
 
-    // Initialize the pin outputs/inputs and run setup tasks
-    directionSwitch.begin(threeWayPins);
-    rapidButton.begin(RAPID_PIN);
-    encoderButton.begin(rotaryMomentaryPin);
-
     // Initialize stepper motor stuff
     engine.init();
     stepper = engine.stepperConnectToPin(PULSE_PIN);
@@ -64,7 +59,16 @@ void setup() {
         stepper->setDelayToEnable(50);
         stepper->setDelayToDisable(1000);
         stepper->setAcceleration(5000); // Steps/sec^2
+        
+        // Disable motors @ boot
+        stepper->moveTo(1);
+        stepper->stopMove();
     }
+
+    // Initialize the pin outputs/inputs and run setup tasks
+    directionSwitch.begin(threeWayPins);
+    rapidButton.begin(RAPID_PIN);
+    encoderButton.begin(rotaryMomentaryPin);
 
     // Everything is set up, let's go!
     lcdMessage.welcomeMessage();

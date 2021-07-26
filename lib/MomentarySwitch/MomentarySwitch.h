@@ -18,8 +18,6 @@ class MomentarySwitch {
         // State management (Pullup defaults high)
         int lastButtonState = UNPRESSED;
         int currButtonState = UNPRESSED;
-        bool paused = false;
-
 
         // Modes [0 = Rapid Movement, 1 = Pause Function, 2 = Change Units]
         int buttonMode;
@@ -43,9 +41,15 @@ class MomentarySwitch {
                         Serial.print("SLOW: ");
                     }
 
-                    lcdMessage.writeSpeed(encodedInchesPerMin);
-                    stepper->setSpeedInUs(stepperUtils.microsPerStep);
-                    stepper->runForward();
+                    if (stepperUtils.paused || encodedInchesPerMin <= 0) {
+                        lcdMessage.pausedMessage();
+                        stepper->stopMove();
+                    }
+                    else {
+                        lcdMessage.writeSpeed(encodedInchesPerMin);
+                        stepper->setSpeedInUs(stepperUtils.microsPerStep);
+                        stepper->runForward();
+                    }
                 }
             }
         }
@@ -53,7 +57,7 @@ class MomentarySwitch {
         void pauseFeed() { // This seems backward, but it's correct for a press-then-release switch
             if (directionSwitch.directionSwitchOn) {
                 if (this->currButtonState == UNPRESSED) {
-                    if (!this->paused) {
+                    if (!stepperUtils.paused) {
                         if (DEBUG) {
                             Serial.print("PAUSE: ");
                         } 
@@ -71,12 +75,13 @@ class MomentarySwitch {
                         stepper->setSpeedInUs(stepperUtils.microsPerStep);
                         stepper->runForward();
                     }
-                    this->paused = !this->paused; // Invert the state
+                    stepperUtils.paused = !stepperUtils.paused; // Invert the state
                 }
             }
         }
 
     public:
+
         // Constructor
         /** Modes 
          *      0 = Rapid Movement

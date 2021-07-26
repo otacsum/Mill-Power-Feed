@@ -17,6 +17,9 @@ class FastStepperUtils {
         const unsigned long microsPerSec = 1000000;
 
     public:
+        // State management
+        bool paused = false;
+
         // Timing and pulse variables
         unsigned long microsPerStep = 999999;
         unsigned long rapidMicrosPerStep = 999999;

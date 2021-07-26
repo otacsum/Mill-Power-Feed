@@ -14,6 +14,12 @@ void readRotaryEncoder() {
   if (newEncoderPosition != oldEncoderPosition) {
     encodedInchesPerMin = newEncoderPosition * SPEEDINCREMENT;
     stepperUtils.setSpeed(encodedInchesPerMin);
+    if (directionSwitch.directionSwitchOn && encodedInchesPerMin > 0) {
+      stepper->runForward();
+    }
+    else {
+      stepper->stopMove();
+    }
     oldEncoderPosition = newEncoderPosition; // State management
   }  
 }

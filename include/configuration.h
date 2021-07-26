@@ -57,24 +57,11 @@ float SPEEDINCREMENT = 0.25; // Inch/Min per step of the rotary encoder.
 /********* ADVANCED CONFIGURATION SETTINGS **********/
 
 // Non-blocking delay in millis for debouncing switch state change
-const unsigned long DEBOUNCEMILLISMOMENTARY = 25;
-const unsigned long DEBOUNCEMILLIS3WAY = 25;
+const unsigned long DEBOUNCEMILLISMOMENTARY = 20;
+const unsigned long DEBOUNCEMILLIS3WAY = 20;
 
 // Delay in millis for infrequent reading of switches to help motor run more efficiently.
-const unsigned long SWITCHREADDELAY = 50;
-
-// Motor pulse width, make this as long as possible without impacting your RPMs
-// Sending the driver's minimum requirement will reduce torque, even though it's not supposed to.
-const unsigned int pulseWidthMicroseconds = 50; 
-
-// Pulse width delay is a blocking function, so this helps counter it for more accurate speeds.
-// Higher numbers = higher speeds
-//const unsigned long calibrationMicros = 8;
-
-// Acceleration Params (linear acceleration)
-const long accelInterval = 10;  // Millis between increasing velocity
-const long accelRate = 20; // Steps increased per accelInterval
-
+const unsigned long SWITCHREADDELAY = 20;
 
 // Rotary Encoder Increment Steps per Detent
 // May vary per encoder, check with a test script first or adjust if
@@ -106,7 +93,6 @@ int UNPRESSED = HIGH;
 volatile float encodedInchesPerMin = 0.00;
 
 // Object initialization arrays
-int stepperControlPins[3] = {PULSE_PIN, DIRECTION_PIN, ENABLE_PIN};
 int threeWayPins[2] = {MOVELEFT_PIN, MOVERIGHT_PIN};
 
 // Rotary encoder position at boot

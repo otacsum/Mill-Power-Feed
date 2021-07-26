@@ -36,7 +36,6 @@ class ThreeWaySwitch {
                 stepper->stopMove(); // In case it's still running.
             }
             if (encodedInchesPerMin > 0) {
-                digitalWriteFast(DIRECTION_PIN, this->direction);
                 stepper->runForward();
             }
         }
@@ -75,7 +74,7 @@ class ThreeWaySwitch {
             } 
             else {  // Switch is on at boot, disable switch until reset.
                 readyState = "Please Set Direction to Middle";
-                lcdMessage.bootError();
+                lcdMessage.bootError(); // Display an error on the LCD
                 // Keep polling, do not continue initialization until the switch goes low
                 while (digitalReadFast(this->RIGHT_PIN) == PRESSED
                     ||
@@ -131,10 +130,12 @@ class ThreeWaySwitch {
                             if (digitalReadFast(this->RIGHT_PIN) == PRESSED) {
                                 // Display on LCD, set direction pin output, and run motor.
                                 this->setDirection(HIGH);
+                                digitalWriteFast(DIRECTION_PIN, this->direction);
                                 this->runMotor();
                             }
                             else if (digitalReadFast(this->LEFT_PIN) == PRESSED) {
                                 this->setDirection(LOW);
+                                digitalWriteFast(DIRECTION_PIN, this->direction);
                                 this->runMotor();
                             }
 
@@ -149,7 +150,7 @@ class ThreeWaySwitch {
                         }
                         else { // Switch is off
                             this->directionSwitchOn = false;
-
+                            stepperUtils.paused = false;
                             this->stopMotor();
                             
                             if (DEBUG) {
