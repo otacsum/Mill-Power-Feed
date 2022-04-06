@@ -43,6 +43,7 @@ class MomentarySwitch {
 
                     if (stepperUtils.paused || encodedInchesPerMin <= 0) {
                         lcdMessage.pausedMessage();
+                        stepper->setSpeedInUs(stepperUtils.microsPerStep);
                         stepper->stopMove();
                     }
                     else {
