@@ -15,13 +15,14 @@ bool DEBUG = false;
 // See: https://www.arduino.cc/reference/en/language/functions/external-interrupts/attachinterrupt/
 #define rotaryPinA 2 // Our first hardware interrupt pin is digital pin 2
 #define rotaryPinB 3 // Our second hardware interrupt pin is digital pin 3
-#define rotaryMomentaryPin 4 // When pressing in on the rotary knob
+#define rotaryMomentaryPin 5 // When pressing in on the rotary knob
 
 // Pins used for stepper control signals
-// This is "timer 4" on a Mega 2560, only these three pins (or another timer triplet may be used)
-#define PULSE_PIN 6
-#define DIRECTION_PIN 7
-#define ENABLE_PIN 8
+// Pulse pin must be 6, 7, or 8 by default per https://github.com/gin66/FastAccelStepper
+// Other timer triplets can be used with Platform IO modifications documented ing the repo above.
+#define PULSE_PIN 7 // Pin 6 doesn't work on my screw terminal board, so I used 7 instead.
+#define DIRECTION_PIN 22
+#define ENABLE_PIN 24
 
 // Pins used for direction signals
 #define MOVELEFT_PIN 9

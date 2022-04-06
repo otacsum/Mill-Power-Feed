@@ -20,6 +20,7 @@ LiquidCrystal lcd(rs_PIN, lcdEnable_PIN, d4_PIN, d5_PIN, d6_PIN, d7_PIN);
 LCDMessage lcdMessage;
 
 // Create instances of the fast stepper objects.
+// Documentation at https://github.com/gin66/FastAccelStepper
 FastAccelStepperEngine engine = FastAccelStepperEngine();
 FastAccelStepper *stepper = NULL;
 
